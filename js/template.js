@@ -7,12 +7,12 @@ class webheader extends HTMLElement {
 
         this.innerHTML = `
             <header>
-                <button style="all:unset; width: 18%; cursor:pointer;" onclick="window.location.href='index.html'">    
+                <button style="all:unset; width: 18%; cursor:pointer;" onclick="window.location.href='/'">    
                     <img src="images/logo.png" style="width:100%;height:auto;">
                 </button>
                 <div class="headersection">
-                    <button class="headerbutton" onclick="window.location.href='help/index.html'">Help</button>
-                    <button class="headerbutton" onclick="window.location.href='account/banking/index.html'">Login/Account</button>
+                    <button class="headerbutton" onclick="window.location.href='help/'">Help</button>
+                    <button class="headerbutton" onclick="window.location.href='account/banking/'">Login/Account</button>
                     <button onclick="alert('The search feature is currently unavailable.')" style="all:unset; width: 10%; cursor:pointer; ">
                         <img src="images/search.png" style="background-color:transparent; width: 60%; height: auto;">
                     </button>
