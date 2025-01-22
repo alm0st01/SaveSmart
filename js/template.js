@@ -12,7 +12,9 @@ class webheader extends HTMLElement {
                 </button>
                 <div class="headersection">
                     <button class="headerbutton" onclick="window.location.href='help/index.html'">Help</button>
-                    <button class="headerbutton" onclick="window.location.href='account/banking/index.html'">Login/Account</button>
+                    <button class="headerbutton" onclick="window.location.href='account/auth/signup/index.html'">Signup</button>
+                    <button class="headerbutton" onclick="window.location.href='account/auth/login/index.html'">Login</button>
+                    <button class="headerbutton" onclick="window.location.href='account/banking/index.html'">Account</button>
                     <button onclick="alert('The search feature is currently unavailable.')" style="all:unset; width: 10%; cursor:pointer; ">
                         <img src="images/search.png" style="background-color:transparent; width: 60%; height: auto;">
                     </button>
