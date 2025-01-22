@@ -37,11 +37,10 @@ app.post('/signup', async (req, res) => {
     const db = client.db('info');
     const collection = db.collection('accountcreds');
 
-    console.log("hi");
+
     const existingUsername = await collection.findOne({'username': username});
     const existingEmail = await collection.findOne({'email': email});
-    console.log("hey");
-    console.log("hello");
+
     if (existingUsername != null){
         res.send(`<script>alert("Your username needs to be original."); window.location.href = "/account/auth/signup/index.html";</script>`);    
     }
@@ -51,7 +50,7 @@ app.post('/signup', async (req, res) => {
     else {
         const result = await collection.insertOne({ username, password, firstName, lastName, email });
         console.log(`New user created with the following id: ${result.insertedId}`);
-        res.send(`<script>alert("Signup successful!"); window.location.href = "/";</script>`);
+        res.send(`<script>alert("Signup successful!"); window.location.href='index.html';</script>`);
     }
   } catch (error) {
     console.error("Error signing up user", error);
@@ -74,7 +73,7 @@ app.post('/login', async (req, res) => {
     console.log(`User found with the id: ${user._id}`);
 
     if (password === user.password){ // Checking if the User ID matches up with the password
-        res.send(`<script>alert("Login successful!"); window.location.href = "/";</script>`);
+        res.send(`<script>alert("Login successful!"); window.location.href='index.html';</script>`);
     }
     else {
         throw "User login information is incorrect."
