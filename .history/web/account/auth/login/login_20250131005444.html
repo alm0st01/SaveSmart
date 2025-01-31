@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../../../">
+    <link rel="stylesheet" href="css/default.css">
+    <script src="js/template.js" defer></script>
+    <script type="text/javascript" src="/eel.js"></script>
+    <title>Login</title>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('login-form');
+        form.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        const formData = new FormData(form);
+        const data = {};
+        formData.forEach((value, key) => {
+            data[key] = value;
+        });
+        eel.dblogin(data.email, data.password).then((result) => {
+            console.log(result);
+            if (result) {
+                // Login successful, redirect to dashboard or next page
+                window.location.href = '../account/banking/index.html';
+            } else {
+                // Login failed, display error message
+                console.error('Login failed');
+            }
+        });
+    });
+});
+    </script>
+</head>
+<body>
+    <web-header></web-header>
+
+    <main>
+        <section class="login-section">
+            <h2>Login</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit">Login</button>
+            </form>
+            <p>Didn't mean to Login? <a href="account/auth/signup/index.html">Sign Up</a></p>
+        </section>
+    </main>
+
+    <web-footer></web-footer>
+</body>
+</html>

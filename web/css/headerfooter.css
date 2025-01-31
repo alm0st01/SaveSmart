@@ -1,0 +1,53 @@
+@import 'fonts.css';
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: white;
+    width: 100%;
+    height: 8vh;
+    margin: 0;
+    padding: 0;
+}
+
+footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    background-color: white;
+    width: 100%;
+    height: 10vh;
+    margin: 0;
+    padding: 0;
+}
+
+.headersection {
+    width:60%;
+    height: 10vh;
+    margin: 0;
+    padding: 0;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.headerbutton {
+    color: black;
+    background-color: #D6E8EE;
+
+    font-family: 'Josefin Sans', sans-serif;
+    border: 0;
+
+    font-size:100%;
+
+    width: 15%;
+    height: 8vh;
+}
+
+.headerbutton:hover {
+    background-color: #97CADB;
+    cursor: pointer;
+}
