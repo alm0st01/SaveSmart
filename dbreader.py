@@ -2,7 +2,7 @@ import sqlite3
 import eel
 
 
-class DBReader:
+class account_reader:
     def __init__(self):
         connection = sqlite3.connect('sqlite/fbla-db.db')
         self.cursor = connection.cursor()
@@ -58,22 +58,22 @@ class DBReader:
 
 
 
-dbreaderobj = DBReader()
+dbreader = account_reader()
 
 @eel.expose
 def getattrwithattr(reqattr, attr1, val1):
-    return dbreaderobj.getattrwithattr(reqattr, attr1, val1)
+    return dbreader.getattrwithattr(reqattr, attr1, val1)
 
 @eel.expose
 def getentrywithattr(attr1, val1):
-    return dbreaderobj.getentrywithattr(attr1, val1)
+    return dbreader.getentrywithattr(attr1, val1)
 
 @eel.expose
 def login(email, password, ret_info=False):
-    return dbreaderobj.login(email, password, ret_info)
+    return dbreader.login(email, password, ret_info)
 
 
 @eel.expose
 def signup(username, fname, lname, email, password):
     print(username, fname, lname, email, password)
-    return dbreaderobj.signup(username, fname, lname, email, password)
+    return dbreader.signup(username, fname, lname, email, password)
