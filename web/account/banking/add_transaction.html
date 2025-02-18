@@ -3,20 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <base href="../../../">
+    <base href="../../">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <link rel="stylesheet" href="css/default.css">
-    <script src="js/template.js" defer></script>
+    <script src="js/template.js"></script>
     <script type="text/javascript" src="/eel.js"></script>
-    <script src="js/transactions.js"></script>
-    <title>Add Transaction</title>
-
+    <script type="text/javascript" src="js/transactions.js"></script>
+    <title>Add transaction</title>
 </head>
 <body>
     <web_header></web_header>
 
     <h2>Add New Transaction</h2>
 
+    <form>
+        <div>
+            <label>Transaction Type:</label>
+            <select name="transactionname">
+                <option value="Select" disabled selected>Select One</option>
+                <option value="Deposit">Deposit</option>
+                <option value="Withdrawal">Withdrawal</option>
+                <option value="Transfer">Transfer</option>
+            </select>
+        </div>
+        <br>
+        <div>
+            <label>Amount:</label>
+            <input type="text" name="Amount">
+        </div>
+        <br>
+        <div>
+            <label>Transaction Name:</label>
+            <input type="text" name="transactionname">
+        </div>
+        <br>
+        <div>
+            <label>Description:</label>
+            <input type="text" name="description">
+        </div>
+        <br>
+        <div>
+            <label>Date:</label>
+            <input type="date" name="date">
+        </div>
+        <br>
+        <button type="submit">Submit</button>
 
+        <img style="width:50%; height: auto;"src="">
 
 </body>
 </html>
