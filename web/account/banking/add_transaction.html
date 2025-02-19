@@ -18,8 +18,8 @@
 
     <form>
         <div>
-            <label>Transaction Type:</label>
-            <select name="transactionname">
+            <label for="transactiontype">Transaction Type:</label>
+            <select id="transactiontype" name="transactiontype">
                 <option value="Select" disabled selected>Select One</option>
                 <option value="Deposit">Deposit</option>
                 <option value="Withdrawal">Withdrawal</option>
@@ -28,28 +28,26 @@
         </div>
         <br>
         <div>
-            <label>Amount:</label>
-            <input type="text" name="Amount">
+            <label for="amount">Amount:</label>
+            <input type="text" id="amount" name="amount">
         </div>
         <br>
         <div>
-            <label>Transaction Name:</label>
-            <input type="text" name="transactionname">
+            <label for="transactionname">Transaction Name:</label>
+            <input type="text" id="transactionname" name="transactionname">
         </div>
         <br>
         <div>
-            <label>Description:</label>
-            <input type="text" name="description">
+            <label for="description">Description:</label>
+            <input type="text" id="description" name="description">
         </div>
         <br>
         <div>
-            <label>Date:</label>
-            <input type="date" name="date">
+            <label for="date">Date:</label>
+            <input type="date" id="date" name="date">
         </div>
         <br>
         <button type="submit">Submit</button>
-
-        <img style="width:50%; height: auto;"src="">
 
 </body>
 </html>
