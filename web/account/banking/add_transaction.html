@@ -6,20 +6,21 @@
     <base href="../../">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <link rel="stylesheet" href="css/default.css">
-    <script src="js/template.js"></script>
+    <script src="js/template.js" type="module" defer></script>
+    <script type="text/javascript" src="js/add_transaction.js" defer></script>
     <script type="text/javascript" src="/eel.js"></script>
     <script type="text/javascript" src="js/transactions.js"></script>
     <title>Add transaction</title>
 </head>
 <body>
-    <web_header></web_header>
+    <web-header></web-header>
 
     <h2>Add New Transaction</h2>
 
-    <form>
+    <form id="add-transaction-form">
         <div>
-            <label for="transactiontype">Transaction Type:</label>
-            <select id="transactiontype" name="transactiontype">
+            <label for="transaction_type">Transaction Type:</label>
+            <select id="transaction_type" name="transaction_type">
                 <option value="Select" disabled selected>Select One</option>
                 <option value="Deposit">Deposit</option>
                 <option value="Withdrawal">Withdrawal</option>
@@ -33,8 +34,8 @@
         </div>
         <br>
         <div>
-            <label for="transactionname">Transaction Name:</label>
-            <input type="text" id="transactionname" name="transactionname">
+            <label for="transaction_name">Transaction Name:</label>
+            <input type="text" id="transaction_name" name="transaction_name">
         </div>
         <br>
         <div>
@@ -43,8 +44,8 @@
         </div>
         <br>
         <div>
-            <label for="date">Date:</label>
-            <input type="date" id="date" name="date">
+            <label for="transaction_date">Date:</label>
+            <input type="date" id="transaction_date" name="transaction_date">
         </div>
         <br>
         <button type="submit">Submit</button>

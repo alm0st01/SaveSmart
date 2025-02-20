@@ -1,3 +1,5 @@
+import { getCookie } from './cookie.js';
+
 class webheader extends HTMLElement {
     connectedCallback(){
         const link = document.createElement('link');
@@ -23,14 +25,6 @@ class webheader extends HTMLElement {
             </header>
         `;
 
-        function getCookie(attr) {
-            let temp = document.cookie.split(';').map(cookie => cookie.split('='));
-            var cookies = temp.reduce((accumulator, [key, value]) =>
-            ({ ...accumulator, [key.trim()]: decodeURIComponent(value)}),
-            {});
-            return cookies[attr]
-        }
-
 
         const attribute = 'fname';
         const isLoggedIn = getCookie(attribute) && document.cookie.includes(attribute+'=');
@@ -49,15 +43,16 @@ class webheader extends HTMLElement {
 
         if (title == "Help"){
             activeButton = this.querySelector('#helpbutton');
+            activeButton.className = "headerbutton active";
         }
         else if (title == "Signup"){
             activeButton = this.querySelector('#signupbutton');
+            activeButton.className = "headerbutton active";
         }
         else if (title == "Login"){
             activeButton = this.querySelector('#loginbutton');
+            activeButton.className = "headerbutton active";
         }
-
-        activeButton.className = "headerbutton active";
     }
 }
 

@@ -16,33 +16,43 @@ document.addEventListener('DOMContentLoaded', function () {
         thead.appendChild(headerRow);
         table.appendChild(thead);
 
-        // Create a 2D array to store cell data
-        const tableData = Array(rows).fill().map(() => Array(headers.length).fill('----'));
+        var filledRows = 0;
+        eel.get_account_transactions(rows)(function(transactions) {
+            filledRows = transactions.length;
+        });
 
         const tbody = document.createElement('tbody');
-        for (let i = 0; i < rows; i++) {
-            const row = document.createElement('tr');
-            for (let j = 0; j < headers.length; j++) {
-                const td = document.createElement('td');
-                td.textContent = tableData[i][j];
-                // Add data attributes to identify cell position
-                td.dataset.row = i;
-                td.dataset.col = j;
-                row.appendChild(td);
-            }
-            tbody.appendChild(row);
-        }
-        table.appendChild(tbody);
 
-        // Function to update cell content
-        table.updateCell = function(row, col, value) {
-            tableData[row][col] = value;
-            const cell = tbody.querySelector(`td[data-row="${row}"][data-col="${col}"]`);
-            if (cell) {
-                cell.textContent = value;
+        eel.get_account_transactions(rows)(function(transactions) {
+
+            transactions.forEach((transaction, i) => {
+                const row = document.createElement('tr');
+                transaction.forEach((value, j) => {
+                    const td = document.createElement('td');
+                    td.textContent = value || '------';
+                    td.dataset.row = i;
+                    td.dataset.col = j;
+                    row.appendChild(td);
+                });
+                tbody.appendChild(row);
+            });
+
+
+            const emptyRows = rows - transactions.length;
+            for (let i = 1; i <= emptyRows; i++) {
+                const row = document.createElement('tr');
+                for (let j = 0; j < headers.length; j++) {
+                    const td = document.createElement('td');
+                    td.textContent = '------';
+                    td.dataset.row = transactions.length + i;
+                    td.dataset.col = j;
+                    row.appendChild(td);
+                }
+                tbody.appendChild(row);
             }
-            return Boolean(cell);
-        };
+        });
+
+        table.appendChild(tbody);
 
         const wrapper = document.createElement('div');
         wrapper.classList.add('table-responsive');
