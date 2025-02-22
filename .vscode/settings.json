@@ -1,0 +1,10 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "database": "${workspaceFolder:fbla-codingprogramming}/sqlite/fbla-db.db",
+            "name": "fbla-db"
+        }
+    ]
+}

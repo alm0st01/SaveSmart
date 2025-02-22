@@ -106,13 +106,19 @@ class transaction_reader:
         self.cursor.connection.commit()
         return True
     
-    def get_transactions(self, account_id, limit=5):
+    def get_transactions(self, account_id, limit=5, offset=0):
         self.cursor.execute('''
-            SELECT transaction_id, transaction_type, amount, transaction_date, balance_after, description FROM transactions WHERE account_id = ?
+            SELECT transaction_id, transaction_type, amount, transaction_date, balance_after, description 
+            FROM transactions 
+            WHERE account_id = ? 
             ORDER BY transaction_date DESC, transaction_id DESC
-            LIMIT ?
-        ''', (account_id, limit))
+            LIMIT ? OFFSET ?
+        ''', (account_id, limit, offset))
         return self.cursor.fetchall()
+
+    def get_transaction_count(self, account_id):
+        self.cursor.execute('SELECT COUNT(*) FROM transactions WHERE account_id = ?', (account_id,))
+        return self.cursor.fetchone()[0]
 
         
 
@@ -142,6 +148,16 @@ def add_transaction(transaction_type, amount, transaction_date, name, descriptio
     return tr.add_transaction(transaction_type, amount, transaction_date, name, description)
 
 @eel.expose
-def get_account_transactions(limit=4):
+def get_account_transactions(limit=5, offset=0):
     account_id = ar.get_acc_id_with_attr('email', eel.get_cookie('email')())
-    return tr.get_transactions(account_id, limit)
+    return tr.get_transactions(account_id, limit, offset)
+
+@eel.expose
+def get_latest_balance():
+    account_id = ar.get_acc_id_with_attr('email', eel.get_cookie('email')())
+    return tr.get_latest_balance(account_id)
+
+@eel.expose
+def get_transaction_count():
+    account_id = ar.get_acc_id_with_attr('email', eel.get_cookie('email')())
+    return tr.get_transaction_count(account_id)

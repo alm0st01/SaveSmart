@@ -1,10 +1,19 @@
 document.addEventListener('DOMContentLoaded', function () {
-    function transactionsTable(rows) {
+    function transactionsTable(rowsPerPage) { //for temporary development, rowsPerPage is not needed
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('table-responsive');
+        wrapper.style.cssText = `
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        `;
+
         const table = document.createElement('table');
         table.classList.add('table', 'table-striped', 'table-bordered', 'table-hover');
 
         const thead = document.createElement('thead');
-        thead.classList.add('thead-dark');
+        thead.classList.add('thead-dark', 'sticky-top');
         const headerRow = document.createElement('tr');
         const headers = ['ID', 'Type', 'Amount', 'Date', 'Balance After', 'Description'];
         headers.forEach(headerText => {
@@ -16,15 +25,9 @@ document.addEventListener('DOMContentLoaded', function () {
         thead.appendChild(headerRow);
         table.appendChild(thead);
 
-        var filledRows = 0;
-        eel.get_account_transactions(rows)(function(transactions) {
-            filledRows = transactions.length;
-        });
-
         const tbody = document.createElement('tbody');
-
-        eel.get_account_transactions(rows)(function(transactions) {
-
+        
+        eel.get_account_transactions(100, 0)(function(transactions) {
             transactions.forEach((transaction, i) => {
                 const row = document.createElement('tr');
                 transaction.forEach((value, j) => {
@@ -36,28 +39,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 tbody.appendChild(row);
             });
-
-
-            const emptyRows = rows - transactions.length;
-            for (let i = 1; i <= emptyRows; i++) {
-                const row = document.createElement('tr');
-                for (let j = 0; j < headers.length; j++) {
-                    const td = document.createElement('td');
-                    td.textContent = '------';
-                    td.dataset.row = transactions.length + i;
-                    td.dataset.col = j;
-                    row.appendChild(td);
-                }
-                tbody.appendChild(row);
-            }
         });
 
         table.appendChild(tbody);
-
-        const wrapper = document.createElement('div');
-        wrapper.classList.add('table-responsive');
         wrapper.appendChild(table);
-
         return wrapper;
     }
     window.transactionsTable = transactionsTable;

@@ -12,4 +12,4 @@ main_window.init('web')
 def print_text(text):
     print(text)
 
-main_window.start("index.html", mode='chrome', size=(1600,800))
+main_window.start("index.html", mode='chrome', size=(1600,700))
