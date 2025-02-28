@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const thead = document.createElement('thead');
         thead.classList.add('thead-dark', 'sticky-top');
         const headerRow = document.createElement('tr');
-        const headers = ['ID', 'Type', 'Amount', 'Date', 'Balance After', 'Description'];
+        const headers = ['ID', 'Type', 'Amount', 'Date', 'Purchase Type', 'Description'];
         headers.forEach(headerText => {
             const th = document.createElement('th');
             th.textContent = headerText;
@@ -32,7 +32,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 const row = document.createElement('tr');
                 transaction.forEach((value, j) => {
                     const td = document.createElement('td');
-                    td.textContent = value || '------';
+                    if ((typeof value === 'number') && (j == 2)) {
+                        td.textContent = `$${value.toFixed(2)}`;
+                    } else {
+                        td.textContent = value || '------';
+                    }
                     td.dataset.row = i;
                     td.dataset.col = j;
                     row.appendChild(td);

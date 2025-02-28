@@ -21,7 +21,7 @@
         
             eel.get_latest_balance()(function(balance) {
                 const currentBalance = document.getElementById('current-balance');
-                currentBalance.textContent = `$${balance}`;
+                currentBalance.textContent = `$${balance.toFixed(2)}`;
             });
         
         });

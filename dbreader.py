@@ -108,7 +108,7 @@ class transaction_reader:
     
     def get_transactions(self, account_id, limit=5, offset=0):
         self.cursor.execute('''
-            SELECT transaction_id, transaction_type, amount, transaction_date, balance_after, description 
+            SELECT transaction_id, transaction_type, amount, transaction_date, transaction_name, description 
             FROM transactions 
             WHERE account_id = ? 
             ORDER BY transaction_date DESC, transaction_id DESC
