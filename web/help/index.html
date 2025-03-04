@@ -18,11 +18,25 @@
 
     <script type="module">
         import { createPurchasePieChart } from './js/pie_chart.js';
-        document.addEventListener('DOMContentLoaded', function() {
-            const myChart = createPurchasePieChart('myChart');
-        });
+        import { getCookie } from './js/cookie.js';
+        
+        console.log(getCookie('email'))
+        if (getCookie('email') != undefined) {
+            document.addEventListener('DOMContentLoaded', function() {
+                const myChart = createPurchasePieChart('myChart');
+            });
+        }
+        else {
+            const userNotLoggedIn = document.querySelector('#userNotLoggedIn');
+            userNotLoggedIn.style.display = "inherit";
+            
+        }
     </script>
     
+    <div style="display: none;" id="userNotLoggedIn">
+        <h1 style="color: black;">You are not logged in. Please log in to access this page.</h1>
+    </div>
+
     <div style="width:100%; max-width:500px; margin:0 auto;">
         <canvas id="myChart"></canvas>
     </div>

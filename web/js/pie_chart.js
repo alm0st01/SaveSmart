@@ -41,8 +41,10 @@ export function createPieChart(id, xlabels, ydata, title) {
 }
 
 export function createPurchasePieChart(id) {
-    const xlabels = ['Housing & Utilities', 'Food', 'Transportation', 'Health', 'Finance','Entertainment','Other']
-    const ydata = [40, 15, 0, 10, 20, 5, 10]
-    const title = "Types of Purchases"
-    const chart = createPieChart(id, xlabels, ydata, title);
+    eel.get_transaction_percentages()(function(data) {
+        const xlabels = data.map(item => item[0] || 'Uncategorized');
+        const ydata = data.map(item => item[2]);
+        const title = "Types of Purchases"
+        const chart = createPieChart(id, xlabels, ydata, title);
+    });
 }

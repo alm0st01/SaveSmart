@@ -119,6 +119,17 @@ class transaction_reader:
     def get_transaction_count(self, account_id):
         self.cursor.execute('SELECT COUNT(*) FROM transactions WHERE account_id = ?', (account_id,))
         return self.cursor.fetchone()[0]
+    
+    def get_category_percentages(self, account_id):
+        self.cursor.execute('''
+            SELECT transaction_name, COUNT(*) as count,
+            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM transactions WHERE account_id = ?), 2) as percentage
+            FROM transactions 
+            WHERE account_id = ?
+            GROUP BY transaction_name
+            ORDER BY count DESC
+        ''', (account_id, account_id))
+        return self.cursor.fetchall()
 
         
 
@@ -161,3 +172,8 @@ def get_latest_balance():
 def get_transaction_count():
     account_id = ar.get_acc_id_with_attr('email', eel.get_cookie('email')())
     return tr.get_transaction_count(account_id)
+
+@eel.expose
+def get_transaction_percentages():
+    account_id = ar.get_acc_id_with_attr('email', eel.get_cookie('email')())
+    return tr.get_category_percentages(account_id)
