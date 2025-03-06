@@ -4,19 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <base href="../../">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-    <link rel="stylesheet" href="css/transaction.css">
+    <!--<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">-->
+    <link rel="stylesheet" href="css/transactions.css">
     <link rel="stylesheet" href="css/default.css">
+    <link rel="stylesheet" href="css/transactiontable.css">
     <script src="js/template.js" type="module" defer></script>
     <script type="text/javascript" src="/eel.js"></script>
-    <script type="text/javascript" src="js/transactions.js"></script>
+    <script type="module" src="js/transactions.js"></script>
     <title>Banking</title>
 </head>
 <body>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const tableContainer = document.getElementById('table-container');
-            const table = transactionsTable(5);
+            const table = window.transactionsTable(5);
             tableContainer.appendChild(table);
         
             eel.get_latest_balance()(function(balance) {
@@ -52,15 +53,22 @@
         .table-responsive::-webkit-scrollbar-thumb:hover {
             background: #7AB8CD;
         }
+
+        #current-balance {
+            position:relative;
+            margin-top: 40px;
+            display: inline-block;
+        }
+
     </style>
 
     <web-header></web-header>
 
     <h1>Account</h1> 
 
-    <div id="table-container"></div>
+    <p style="margin-top: -40px;">Current Balance: <span id="current-balance">$0.00</span></p>
 
-    <p>Current Balance: <span id="current-balance">$0.00</span></p>
+    <div id="table-container"></div>
 
     <button class="add-transaction-btn" type="button" style="all:unset; cursor:pointer;" onclick="window.location.href='account/banking/add_transaction.html'">
         <?xml version="1.0" encoding="utf-8"?>
