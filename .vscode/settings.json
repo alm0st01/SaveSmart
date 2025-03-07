@@ -6,5 +6,6 @@
             "database": "${workspaceFolder:fbla-codingprogramming}/sqlite/fbla-db.db",
             "name": "fbla-db"
         }
-    ]
+    ],
+    "sqltools.useNodeRuntime": true
 }

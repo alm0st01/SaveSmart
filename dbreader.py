@@ -26,26 +26,26 @@ class account_reader:
         return self.encrypt.decrypt_text(result)
 
     def get_acc_id_with_attr(self, attr1, val1):
-        # Only use the function if the username or email are given 
-        # as these are the only unique user credentials
         try:
-            val1 = self.encrypt.encrypt_text(val1)
-            self.cursor.execute("SELECT account_id FROM accountcreds WHERE email = ?", (val1,))
-            result = self.cursor.fetchone()
-            
-            if result is None:
-                print(f"No account found for email={val1}")
+            if not val1:
+                print("No value provided for lookup")
                 return None
+            
+            # Get all users and compare decrypted values for email
+            self.cursor.execute("SELECT * FROM accountcreds")
+            all_users = self.cursor.fetchall()
+            
+            for user in all_users:
+                stored_email = self.encrypt.decrypt_text(user[4])  # email at index 4
+                if val1 == stored_email:
+                    account_id = user[0]  # account_id at index 0
+                    return self.encrypt.decrypt_text(account_id)
                 
-            account_id = result[0]
-            print(f"Found account_id: {account_id}")
+            print(f"No account found for email={val1}")
+            return None
             
-            if isinstance(account_id, bytes):
-                return self.encrypt.decrypt_text(account_id)
-            return account_id
-            
-        except sqlite3.Error as e:
-            print(f"Database error: {e}")
+        except Exception as e:
+            print(f"Error in get_acc_id_with_attr: {str(e)}")
             return None
     
     def getentrywithattr(self, attr1, val1):
@@ -65,52 +65,80 @@ class account_reader:
         
 
     def signup(self, username, fname, lname, email, password):
-        enc_username = self.encrypt.encrypt_text(username)
-        enc_fname = self.encrypt.encrypt_text(fname)
-        enc_lname = self.encrypt.encrypt_text(lname)
-        enc_email = self.encrypt.encrypt_text(email)
-        enc_password = self.encrypt.encrypt_text(password)
+        try:
+            # Encrypt values for database storage
+            enc_username = self.encrypt.encrypt_text(username)
+            enc_fname = self.encrypt.encrypt_text(fname)
+            enc_lname = self.encrypt.encrypt_text(lname)
+            enc_email = self.encrypt.encrypt_text(email)
+            enc_password = self.encrypt.encrypt_text(password)
 
-        account_id = str(randint(10**8, (10**9)-1))
-        enc_account_id = self.encrypt.encrypt_text(account_id)
+            account_id = str(randint(10**8, (10**9)-1))
+            enc_account_id = self.encrypt.encrypt_text(account_id)
 
-        info = (enc_account_id, enc_username, enc_fname, enc_lname, enc_email, enc_password)
-        exists = self.cursor.execute("SELECT * FROM accountcreds WHERE email = ? OR username = ?", (enc_email, enc_username))
-        acc_id_exists = self.cursor.execute("SELECT * FROM accountcreds WHERE account_id = ?", (enc_account_id,))
-        acc_id_exists_bool = acc_id_exists.fetchone()
-        if exists.fetchone() == None and acc_id_exists_bool == None:
-            self.cursor.execute("INSERT INTO accountcreds (account_id, username, fname, lname, email, password) VALUES (?,?,?,?,?,?)", info)
-            self.cursor.connection.commit()
-            return True
-        else:
-            if acc_id_exists_bool:
-                self.signup(username, fname, lname, email, password)
+            info = (enc_account_id, enc_username, enc_fname, enc_lname, enc_email, enc_password)
+            exists = self.cursor.execute("SELECT * FROM accountcreds WHERE email = ? OR username = ?", (enc_email, enc_username))
+            acc_id_exists = self.cursor.execute("SELECT * FROM accountcreds WHERE account_id = ?", (enc_account_id,))
+            acc_id_exists_bool = acc_id_exists.fetchone()
+            exists_result = exists.fetchone()
+
+            if exists_result is None and acc_id_exists_bool is None:
+                self.cursor.execute("INSERT INTO accountcreds (account_id, username, fname, lname, email, password) VALUES (?,?,?,?,?,?)", info)
+                self.cursor.connection.commit()
+                return {
+                    'success': True,
+                    'values': {
+                        'username': username,  # Return original unencrypted values
+                        'fname': fname,
+                        'lname': lname,
+                        'email': email,
+                        'password': password
+                    }
+                }
             else:
-                return False
+                if acc_id_exists_bool:
+                    # If only the account_id exists, try again with a new account_id
+                    return self.signup(username, fname, lname, email, password)
+                else:
+                    # If username or email exists
+                    return {'success': False}
+                    
+        except Exception as e:
+            print(f"Error in signup: {str(e)}")
+            return {'success': False}
 
 
     def login(self, email, password, ret_info=False):
-        email = self.encrypt.encrypt_text(email)
-        password = self.encrypt.encrypt_text(password)
-
-
-        self.cursor.execute("SELECT * FROM accountcreds WHERE email = ? AND password = ?", (email, password))
-        user_info = self.cursor.fetchone()
-        # temporarily, ret_info should equal false until the decryption process is complete
-        if ret_info:
-            if user_info == None:
-                print("FALSE A")
-                return False
-            else:
-                print("TRUE A")
-                return user_info
-        else:
-            if user_info == None:
-                print("FALSE B")
-                return False
-            else:
-                print("TRUE B")
-                return True
+        try:
+            # Get all users and compare decrypted values
+            self.cursor.execute("SELECT * FROM accountcreds")
+            all_users = self.cursor.fetchall()
+            
+            for user in all_users:
+                # Decrypt the stored email and password
+                stored_email = self.encrypt.decrypt_text(user[4])  # email at index 4
+                stored_password = self.encrypt.decrypt_text(user[5])  # password at index 5
+                
+                if email == stored_email and password == stored_password:
+                    if ret_info:
+                        # Return decrypted values for cookies
+                        return {
+                            'success': True,
+                            'values': {
+                                'username': self.encrypt.decrypt_text(user[1]),  # username
+                                'fname': self.encrypt.decrypt_text(user[2]),     # fname
+                                'lname': self.encrypt.decrypt_text(user[3]),     # lname
+                                'email': email,                                  # use original email
+                                'password': password                             # use original password
+                            }
+                        }
+                    return True
+            
+            return False
+            
+        except Exception as e:
+            print(f"Login error: {str(e)}")
+            return False
 
 class transaction_reader:
     def __init__(self):
@@ -146,32 +174,45 @@ class transaction_reader:
             return 0.0 # If the user has made no transactions, this will return
 
     def add_transaction(self, transaction_type, amount, transaction_date, name, description):
-        account_id = self.ar.get_acc_id_with_attr('email', self.encrypt.encrypt_text(eel.get_cookie('email')()))
-        latest_balance = self.get_latest_balance(account_id)
-        new_balance = latest_balance
-        amt = float(amount)
+        try:
+            # Get the email from cookie without encrypting it again
+            email = eel.get_cookie('email')()
+            account_id = self.ar.get_acc_id_with_attr('email', email)
+            
+            if account_id is None:
+                print("Error: Could not find account ID")
+                return False
+                
+            latest_balance = self.get_latest_balance(account_id)
+            new_balance = latest_balance
+            amt = float(amount)
 
+            if transaction_type == "Deposit":
+                new_balance += amt
+            elif transaction_type == "Withdrawal" or transaction_type == "Transfer":
+                new_balance -= amt
 
-        if account_id is None:
-            print("Error: Could not find account ID")
+            # Encrypt all values for storage
+            enc_transaction_type = self.encrypt.encrypt_text(transaction_type)
+            enc_amount = self.encrypt.encrypt_text(str(amount))
+            enc_transaction_date = self.encrypt.encrypt_text(transaction_date)
+            enc_name = self.encrypt.encrypt_text(name)
+            enc_description = self.encrypt.encrypt_text(description)
+            enc_new_balance = self.encrypt.encrypt_text(str(new_balance))
+            enc_account_id = self.encrypt.encrypt_text(account_id)
+            
+            self.cursor.execute('''
+                INSERT INTO transactions 
+                (account_id, transaction_type, amount, transaction_date, transaction_name, description, balance_after) 
+                VALUES (?,?,?,?,?,?,?)
+            ''', (enc_account_id, enc_transaction_type, enc_amount, enc_transaction_date, enc_name, enc_description, enc_new_balance))
+            
+            self.cursor.connection.commit()
+            return True
+            
+        except Exception as e:
+            print(f"Error adding transaction: {str(e)}")
             return False
-        print(f"Using account_id: {account_id}")
-        
-        if transaction_type == "Deposit":
-            new_balance += amt
-        elif transaction_type == "Withdrawal" or transaction_type == "Transfer":
-            new_balance -= amt
-
-        transaction_type = self.encrypt.encrypt_text(transaction_type)
-        amt = self.encrypt.encrypt_text(amount)
-        transaction_date = self.encrypt.encrypt_text(transaction_date)
-        name = self.encrypt.encrypt_text(name)
-        description = self.encrypt.encrypt_text(description)
-        new_balance_str = self.encrypt.encrypt_text(new_balance)
-        
-        self.cursor.execute(f'INSERT INTO transactions (account_id, transaction_type, amount, transaction_date, transaction_name, description, balance_after) VALUES (?,?,?,?,?,?,?)', (account_id, transaction_type, amt, transaction_date, name, description, new_balance_str))
-        self.cursor.connection.commit()
-        return True
     
     def get_transactions(self, account_id, limit=5, offset=0):
         account_id = self.encrypt.encrypt_text(account_id)
@@ -280,8 +321,19 @@ def add_transaction(transaction_type, amount, transaction_date, name, descriptio
 
 @eel.expose
 def get_account_transactions(limit=5, offset=0):
-    account_id = ar.get_acc_id_with_attr('email', eel.get_cookie('email')())
-    return tr.get_transactions(account_id, limit, offset)
+    try:
+        email = eel.get_cookie('email')()
+        print(f"Looking up transactions for email: {email}")
+        
+        account_id = ar.get_acc_id_with_attr('email', email)
+        if account_id is None:
+            print("No account ID found for email:", email)
+            return []
+            
+        return tr.get_transactions(account_id, limit, offset)
+    except Exception as e:
+        print(f"Error getting transactions: {str(e)}")
+        return []
 
 @eel.expose
 def get_account_transactions_by_category(category, limit=5, offset=0):
