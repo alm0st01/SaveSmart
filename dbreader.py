@@ -39,7 +39,8 @@ class account_reader:
                 stored_email = self.encrypt.decrypt_text(user[4])  # email at index 4
                 if val1 == stored_email:
                     account_id = user[0]  # account_id at index 0
-                    return self.encrypt.decrypt_text(account_id)
+                    # Return the encrypted account_id directly
+                    return account_id
                 
             print(f"No account found for email={val1}")
             return None
@@ -160,18 +161,23 @@ class transaction_reader:
         return result
     
     def get_latest_balance(self, account_id):
-        account_id = self.encrypt.encrypt_text(account_id)
-        self.cursor.execute(f'''
+        try:
+            # account_id is already encrypted
+            self.cursor.execute('''
                             SELECT balance_after FROM transactions WHERE account_id = ?
                             ORDER BY transaction_date DESC, transaction_id DESC 
                             LIMIT 1
                             ''', (account_id,))
-        
-        result = self.cursor.fetchone()
-        if result:
-            return float(self.encrypt.encrypt_text(result[0]))
-        else:
-            return 0.0 # If the user has made no transactions, this will return
+            
+            result = self.cursor.fetchone()
+            if result and result[0]:
+                decrypted_balance = self.encrypt.decrypt_text(result[0])
+                print(f"Latest balance found: {decrypted_balance}")
+                return float(decrypted_balance)
+            return 0.0
+        except Exception as e:
+            print(f"Error getting balance: {str(e)}")
+            return 0.0
 
     def add_transaction(self, transaction_type, amount, transaction_date, name, description):
         try:
@@ -192,6 +198,9 @@ class transaction_reader:
             elif transaction_type == "Withdrawal" or transaction_type == "Transfer":
                 new_balance -= amt
 
+
+            transaction_id = str(randint(10**8, (10**9)-1))
+
             # Encrypt all values for storage
             enc_transaction_type = self.encrypt.encrypt_text(transaction_type)
             enc_amount = self.encrypt.encrypt_text(str(amount))
@@ -199,15 +208,23 @@ class transaction_reader:
             enc_name = self.encrypt.encrypt_text(name)
             enc_description = self.encrypt.encrypt_text(description)
             enc_new_balance = self.encrypt.encrypt_text(str(new_balance))
-            enc_account_id = self.encrypt.encrypt_text(account_id)
+            enc_transaction_id = self.encrypt.encrypt_text(transaction_id)
+            # Don't re-encrypt account_id since it's already encrypted
+
+            transact_id_query = self.cursor.execute("SELECT * FROM transactions WHERE transaction_id = ?", (enc_transaction_id,))
+            transact_id_exists = transact_id_query.fetchone()
+
+            if transact_id_exists:
+                self.add_transaction(transaction_type, amount, transaction_date, name, description)
             
             self.cursor.execute('''
                 INSERT INTO transactions 
-                (account_id, transaction_type, amount, transaction_date, transaction_name, description, balance_after) 
-                VALUES (?,?,?,?,?,?,?)
-            ''', (enc_account_id, enc_transaction_type, enc_amount, enc_transaction_date, enc_name, enc_description, enc_new_balance))
+                (transaction_id,account_id, transaction_type, amount, transaction_date, transaction_name, description, balance_after) 
+                VALUES (?,?,?,?,?,?,?,?)
+            ''', (enc_transaction_id, account_id, enc_transaction_type, enc_amount, enc_transaction_date, enc_name, enc_description, enc_new_balance))
             
             self.cursor.connection.commit()
+            print(f"Successfully added transaction for account {account_id}")
             return True
             
         except Exception as e:
@@ -215,82 +232,200 @@ class transaction_reader:
             return False
     
     def get_transactions(self, account_id, limit=5, offset=0):
-        account_id = self.encrypt.encrypt_text(account_id)
-
-        self.cursor.execute('''
-            SELECT transaction_id, transaction_type, amount, transaction_date, transaction_name, description 
-            FROM transactions 
-            WHERE account_id = ? 
-            ORDER BY transaction_date DESC, transaction_id DESC
-            LIMIT ? OFFSET ?
-        ''', (account_id, limit, offset))
-
-        result = self.cursor.fetchall()
-        
-        decrypted_result = []
-        for i, value in enumerate(result):
-            for x, valuex in enumerate(value):
-                decrypted_result.append(self.encrypt.decrypt_text(valuex))
-
-        return decrypted_result
+        try:
+            print(f"Getting transactions for account_id: {account_id}")
+            # Don't encrypt account_id again since it's already encrypted
+            query = '''
+                SELECT transaction_id, transaction_type, amount, transaction_date, transaction_name, description 
+                FROM transactions 
+                WHERE account_id = ? 
+                ORDER BY transaction_date DESC, transaction_id DESC
+                LIMIT ? OFFSET ?
+            '''
+            print(f"Executing query with account_id: {account_id}, limit: {limit}, offset: {offset}")
+            
+            self.cursor.execute(query, (account_id, limit, offset))
+            result = self.cursor.fetchall()
+            
+            if not result:
+                print("No transactions found")
+                return []
+                
+            print(f"Found {len(result)} transactions")
+            
+            # Process each row properly
+            decrypted_result = []
+            for row in result:
+                decrypted_row = []
+                print(f"Processing row: {row}")
+                for value in row:
+                    if value is not None:
+                        try:
+                            decrypted_value = self.encrypt.decrypt_text(value)
+                            decrypted_row.append(decrypted_value)
+                            print(f"Decrypted value: {decrypted_value}")
+                        except Exception as e:
+                            print(f"Error decrypting value {value}: {str(e)}")
+                            decrypted_row.append(str(value))
+                    else:
+                        decrypted_row.append(None)
+                decrypted_result.append(decrypted_row)
+            
+            print("Final decrypted transactions:", decrypted_result)
+            return decrypted_result
+            
+        except Exception as e:
+            print(f"Error getting transactions: {str(e)}")
+            return []
     
     def get_account_transactions_by_category(self, account_id, category, limit=5, offset=0):
-        account_id = self.encrypt.encrypt_text(account_id)
-        #category = self.encrypt.encrypt_text(category)
+        try:
+            print(f"Getting transactions for category {category}, account_id: {account_id}")
+            
+            # Get all transactions for this account
+            self.cursor.execute('''
+                SELECT transaction_id, transaction_type, amount, transaction_date, description 
+                FROM transactions 
+                WHERE account_id = ?
+                ORDER BY transaction_date DESC
+            ''', (account_id,))
+            
+            result = self.cursor.fetchall()
 
-        self.cursor.execute('''
-            SELECT transaction_id, transaction_type, amount, transaction_date, transaction_name, description 
-            FROM transactions 
-            WHERE account_id = ? AND transaction_name = ?
-            ORDER BY transaction_date DESC, transaction_id DESC
-            LIMIT ? OFFSET ?
-        ''', (account_id, category, limit, offset))
+            self.cursor.execute('''
+                SELECT DISTINCT transaction_name 
+                FROM transactions 
+                WHERE account_id = ?
+                ORDER BY transaction_date DESC
+            ''', (account_id,))
 
-        result = self.cursor.fetchall()
-        
-        decrypted_result = []
-        for i, value in enumerate(result):
-            for x, valuex in enumerate(value):
-                decrypted_result.append(self.encrypt.decrypt_text(valuex))
+            existing_categories = self.cursor.fetchall()
+            print("Existing encrypted categories in DB:", existing_categories)
 
-        return decrypted_result
+            if not result:
+                print("No transactions found")
+                return []
+            
+            # Filter transactions by decrypted category
+            filtered_transactions = []
+            for i, row in enumerate(existing_categories):
+                try:
+                    decrypted_category = self.encrypt.decrypt_text(row[0])  # transaction_name is at index 4
+                    if decrypted_category == category:
+                        filtered_transactions.append(result[i])
+                except Exception as e:
+                    print(f"Error decrypting category: {str(e)}")
+                    continue
+            
+            # Apply limit and offset to filtered results
+            start_idx = offset
+            end_idx = offset + limit
+            filtered_transactions = filtered_transactions[start_idx:end_idx]
+            
+            if not filtered_transactions:
+                print(f"No transactions found for category {category}")
+                return []
+                
+            print(f"Found {len(filtered_transactions)} transactions for category {category}")
+            
+            # Process each row properly
+            decrypted_result = []
+            for row in filtered_transactions:
+                decrypted_row = []
+                print(f"Processing row: {row}")
+                for value in row:
+                    if value is not None:
+                        try:
+                            decrypted_value = self.encrypt.decrypt_text(value)
+                            decrypted_row.append(decrypted_value)
+                            print(f"Decrypted value: {decrypted_value}")
+                        except Exception as e:
+                            print(f"Error decrypting value {value}: {str(e)}")
+                            decrypted_row.append(str(value))
+                    else:
+                        decrypted_row.append(None)
+                decrypted_result.append(decrypted_row)
+            
+            print("Final decrypted transactions:", decrypted_result)
+            return decrypted_result
+            
+        except Exception as e:
+            print(f"Error getting transactions by category: {str(e)}")
+            return []
 
     def get_transaction_count(self, account_id):
-        account_id = self.encrypt.encrypt_text(account_id)
-        self.cursor.execute('SELECT COUNT(*) FROM transactions WHERE account_id = ?', (account_id,))
-        return self.cursor.fetchone()[0]
+        try:
+            # account_id is already encrypted
+            self.cursor.execute('SELECT COUNT(*) FROM transactions WHERE account_id = ?', (account_id,))
+            count = self.cursor.fetchone()[0]
+            print(f"Found {count} transactions for account")
+            return count
+        except Exception as e:
+            print(f"Error getting transaction count: {str(e)}")
+            return 0
     
     def get_category_percentages(self, account_id):
-        account_id = self.encrypt.encrypt_text(account_id)
-
-        self.cursor.execute('''
-            SELECT transaction_name, COUNT(*) as count,
-            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM transactions WHERE account_id = ?), 2) as percentage
-            FROM transactions 
-            WHERE account_id = ?
-            GROUP BY transaction_name
-            ORDER BY count DESC
-        ''', (account_id, account_id))
-        
-        result = self.cursor.fetchall()
-        
-        decrypted_result = []
-        for i, value in enumerate(result):
-                decrypted_category = self.encrypt.decrypt_text(value[0])
-                decrypted_result.append((decrypted_category, value[1], value[2]))
-
-        return decrypted_result
+        try:
+            # account_id is already encrypted from get_acc_id_with_attr
+            print(f"Getting category percentages for account_id: {account_id}")
+            
+            self.cursor.execute('''
+                SELECT transaction_name, COUNT(*) as count,
+                ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM transactions WHERE account_id = ?), 2) as percentage
+                FROM transactions 
+                WHERE account_id = ?
+                GROUP BY transaction_name
+                ORDER BY count DESC
+            ''', (account_id, account_id))
+            
+            result = self.cursor.fetchall()
+            print(f"Found {len(result)} categories")
+            
+            decrypted_result = []
+            for value in result:
+                try:
+                    decrypted_category = self.encrypt.decrypt_text(value[0])
+                    decrypted_result.append((decrypted_category, value[1], value[2]))
+                    print(f"Processed category: {decrypted_category}")
+                except Exception as e:
+                    print(f"Error processing category: {str(e)}")
+            
+            return decrypted_result
+            
+        except Exception as e:
+            print(f"Error getting category percentages: {str(e)}")
+            return []
     
-    def get_category_(self, account_id):
-        self.cursor.execute('''
-            SELECT transaction_name, COUNT(*) as count,
-            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM transactions WHERE account_id = ?), 2) as percentage
-            FROM transactions 
-            WHERE account_id = ?
-            GROUP BY transaction_name
-            ORDER BY count DESC
-        ''', (account_id, account_id))
-        return self.cursor.fetchall()
+    def get_category_amounts(self, account_id):
+        try:
+            # account_id is already encrypted from get_acc_id_with_attr
+            print(f"Getting category percentages for account_id: {account_id}")
+            
+            self.cursor.execute('''
+                SELECT transaction_name, amount,
+                FROM transactions
+                WHERE account_id = ?
+                GROUP BY transaction_name
+                ORDER BY count DESC
+            ''', (account_id, account_id))
+            
+            result = self.cursor.fetchall()
+            print(f"Found {len(result)} categories")
+            
+            decrypted_result = []
+            for value in result:
+                try:
+                    decrypted_category = self.encrypt.decrypt_text(value[0])
+                    decrypted_result.append((decrypted_category, value[1], value[2]))
+                    print(f"Processed category: {decrypted_category}")
+                except Exception as e:
+                    print(f"Error processing category: {str(e)}")
+            
+            return decrypted_result
+            
+        except Exception as e:
+            print(f"Error getting category percentages: {str(e)}")
+            return []
 
         
 
@@ -325,12 +460,27 @@ def get_account_transactions(limit=5, offset=0):
         email = eel.get_cookie('email')()
         print(f"Looking up transactions for email: {email}")
         
+        if not email:
+            print("No email found in cookie")
+            return []
+            
         account_id = ar.get_acc_id_with_attr('email', email)
         if account_id is None:
             print("No account ID found for email:", email)
             return []
             
-        return tr.get_transactions(account_id, limit, offset)
+        transactions = tr.get_transactions(account_id, limit, offset)
+        print("Retrieved transactions (raw):", transactions)
+        
+        # Validate transaction data
+        if transactions:
+            for idx, trans in enumerate(transactions):
+                print(f"Transaction {idx}:", trans)
+                if len(trans) != 6:  # We expect 6 columns
+                    print(f"Warning: Transaction {idx} has wrong number of columns: {len(trans)}")
+                    
+        return transactions
+        
     except Exception as e:
         print(f"Error getting transactions: {str(e)}")
         return []
@@ -351,7 +501,7 @@ def get_transaction_count():
     return tr.get_transaction_count(account_id)
 
 @eel.expose
-def get_category_values():
+def get_category_percentages():
     mode = 1
 
     account_id = ar.get_acc_id_with_attr('email', eel.get_cookie('email')())

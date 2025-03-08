@@ -61,24 +61,56 @@ export function createPieChart(id, xlabels, ydata, title, onClick) {
     return chart;
 }
 
-export function createPurchasePieChart(id) {
-    eel.get_category_values()(function(data) {
+export function createPurchasePieChartByPercent(id) {
+    eel.get_category_percentages()(function(data) {
         const xlabels = data.map(item => item[0] || 'Uncategorized');
         const ydata = data.map(item => item[2]);
-        const title = "Types of Purchases"
+        const title = "Purchase Categories by Percentage"
 
         const handleClick = (label, value) => {
-            console.log(`Clicked on category ${label}`);
-            budgetingTransactionsTable(label);
-
+            console.log(`Clicked on category ${label} with value ${value}`);
             const tableContainer = document.getElementById('table-container');
-            tableContainer.innerHTML = '';
-
-            const table = window.budgetingTransactionsTable(label);
-            tableContainer.appendChild(table);
+            if (!tableContainer) {
+                console.error("Could not find element");
+                return;
+            }
             
+            tableContainer.innerHTML = '';
+            const loadingMessage = document.createElement('div');
+            loadingMessage.textContent = `Loading transactions for ${label}...`;
+            tableContainer.appendChild(loadingMessage);
+            
+            // Create the table
+            const table = budgetingTransactionsTable(label);
         };
 
+        const chart = createPieChart(id, xlabels, ydata, title, handleClick);
+    });
+}
+
+
+export function createPurchasePieChartByAmount(id) {
+    eel.get_category_percentages()(function(data) {
+        const xlabels = data.map(item => item[0] || 'Uncategorized');
+        const ydata = data.map(item => item[2]);
+        const title = "Purchase Categories by Amount"
+
+        const handleClick = (label, value) => {
+            console.log(`Clicked on category ${label} with value ${value}`);
+            const tableContainer = document.getElementById('table-container');
+            if (!tableContainer) {
+                console.error("Could not find table-container element");
+                return;
+            }
+            
+            tableContainer.innerHTML = '';
+            const loadingMessage = document.createElement('div');
+            loadingMessage.textContent = `Loading transactions for ${label}...`;
+            tableContainer.appendChild(loadingMessage);
+            
+            // Create the table
+            const table = budgetingTransactionsTable(label);
+        };
 
         const chart = createPieChart(id, xlabels, ydata, title, handleClick);
     });
