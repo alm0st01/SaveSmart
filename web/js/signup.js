@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function () {
             data[key] = value;
         });
 
-        eel.signup(data.username, data.fname, data.lname, data.email, data.password)(function(response) {
+        eel.signup(data.username, data.firstName, data.lastName, data.email, data.password)(function(response) {
             if (response.success) {
                 const expire_date = new Date();
                 expire_date.setTime(expire_date.getTime() + (2*60*60*1000));
