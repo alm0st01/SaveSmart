@@ -18,7 +18,7 @@ class webheader extends HTMLElement {
                     <button class="headerbutton" id="loginbutton" onclick="window.location.href='account/auth/login/login.html'">Login</button>
                     <button class="headerbutton" id="signupbutton" onclick="window.location.href='account/auth/signup/index.html'">Signup</button>
                     <button class="headerbutton" id="accountbutton" onclick="window.location.href='account/banking/index.html'">Account</button>
-                    <button class="headerbutton" id="helpbutton" onclick="window.location.href='help/index.html'">Budgeting Goals</button>
+                    <button class="headerbutton" id="helpbutton" onclick="window.location.href='goals/index.html'">Budgeting & Goals</button>
                     <button class="headerbutton" id="logoutbutton" onclick="window.logout()">Logout</button>
                     <!--<button class="search-btn" onclick="alert('The search feature is currently unavailable.')">
                         <img src="images/search.png" class="search-icon">

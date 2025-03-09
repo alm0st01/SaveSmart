@@ -278,75 +278,56 @@ class transaction_reader:
             print(f"Error getting transactions: {str(e)}")
             return []
     
-    def get_account_transactions_by_category(self, account_id, category, limit=5, offset=0):
+    def get_account_transactions_by_category(self, account_id, category, mode, limit=5, offset=0):
         try:
-            print(f"Getting transactions for category {category}, account_id: {account_id}")
+            print(f"Getting transactions for category {category}, account_id: {account_id}, mode: {mode}")
             
-            # Get all transactions for this account
+            # Get transactions for this account
             self.cursor.execute('''
-                SELECT transaction_id, transaction_type, amount, transaction_date, description 
+                SELECT transaction_id, transaction_type, amount, transaction_date, description, transaction_name
                 FROM transactions 
                 WHERE account_id = ?
                 ORDER BY transaction_date DESC
             ''', (account_id,))
             
             result = self.cursor.fetchall()
-
-            self.cursor.execute('''
-                SELECT DISTINCT transaction_name 
-                FROM transactions 
-                WHERE account_id = ?
-                ORDER BY transaction_date DESC
-            ''', (account_id,))
-
-            existing_categories = self.cursor.fetchall()
-            print("Existing encrypted categories in DB:", existing_categories)
-
             if not result:
-                print("No transactions found")
-                return []
-            
-            # Filter transactions by decrypted category
-            filtered_transactions = []
-            for i, row in enumerate(existing_categories):
-                try:
-                    decrypted_category = self.encrypt.decrypt_text(row[0])  # transaction_name is at index 4
-                    if decrypted_category == category:
-                        filtered_transactions.append(result[i])
-                except Exception as e:
-                    print(f"Error decrypting category: {str(e)}")
-                    continue
-            
-            # Apply limit and offset to filtered results
-            start_idx = offset
-            end_idx = offset + limit
-            filtered_transactions = filtered_transactions[start_idx:end_idx]
-            
-            if not filtered_transactions:
-                print(f"No transactions found for category {category}")
                 return []
                 
-            print(f"Found {len(filtered_transactions)} transactions for category {category}")
-            
-            # Process each row properly
+            # Filter and decrypt transactions
             decrypted_result = []
-            for row in filtered_transactions:
-                decrypted_row = []
-                print(f"Processing row: {row}")
-                for value in row:
-                    if value is not None:
-                        try:
-                            decrypted_value = self.encrypt.decrypt_text(value)
-                            decrypted_row.append(decrypted_value)
-                            print(f"Decrypted value: {decrypted_value}")
-                        except Exception as e:
-                            print(f"Error decrypting value {value}: {str(e)}")
-                            decrypted_row.append(str(value))
-                    else:
-                        decrypted_row.append(None)
-                decrypted_result.append(decrypted_row)
-            
-            print("Final decrypted transactions:", decrypted_result)
+            for row in result:
+                try:
+                    decrypted_type = self.encrypt.decrypt_text(row[1])
+                    decrypted_category = self.encrypt.decrypt_text(row[5])
+                    
+                    # Only include transactions matching category and mode
+                    if decrypted_category == category:
+                        # Mode 1: Only Withdrawals and Transfers
+                        # Mode 2: Only Deposits
+                        # Any other mode: All transactions
+                        if (mode == 1 and decrypted_type in ['Withdrawal', 'Transfer']) or \
+                        (mode == 2 and decrypted_type == 'Deposit') or \
+                        (mode not in [1, 2]):
+                            
+                            decrypted_row = []
+                            for value in row[:-1]:  # Exclude transaction_name from result
+                                if value is not None:
+                                    try:
+                                        decrypted_value = self.encrypt.decrypt_text(value)
+                                        decrypted_row.append(decrypted_value)
+                                    except Exception as e:
+                                        print(f"Error decrypting value: {str(e)}")
+                                        decrypted_row.append(str(value))
+                                else:
+                                    decrypted_row.append(None)
+                            decrypted_result.append(decrypted_row)
+                            print(f"Added {decrypted_type} transaction for category {decrypted_category}")
+                except Exception as e:
+                    print(f"Error processing transaction: {str(e)}")
+                    continue
+                    
+            print(f"Returning {len(decrypted_result)} filtered transactions")
             return decrypted_result
             
         except Exception as e:
@@ -364,33 +345,61 @@ class transaction_reader:
             print(f"Error getting transaction count: {str(e)}")
             return 0
     
-    def get_category_percentages(self, account_id):
+    def get_category_percentages(self, account_id, mode=0):
         try:
-            # account_id is already encrypted from get_acc_id_with_attr
-            print(f"Getting category percentages for account_id: {account_id}")
+            print(f"Getting category percentages for account_id: {account_id}, mode: {mode}")
             
+            # Get all transactions first
             self.cursor.execute('''
-                SELECT transaction_name, COUNT(*) as count,
-                ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM transactions WHERE account_id = ?), 2) as percentage
+                SELECT transaction_name, transaction_type 
                 FROM transactions 
                 WHERE account_id = ?
-                GROUP BY transaction_name
-                ORDER BY count DESC
-            ''', (account_id, account_id))
+            ''', (account_id,))
             
-            result = self.cursor.fetchall()
-            print(f"Found {len(result)} categories")
+            transactions = self.cursor.fetchall()
+            if not transactions:
+                return []
+                
+            # Decrypt and process transactions
+            categories = {}
+            total_count = 0
             
-            decrypted_result = []
-            for value in result:
-                try:
-                    decrypted_category = self.encrypt.decrypt_text(value[0])
-                    decrypted_result.append((decrypted_category, value[1], value[2]))
-                    print(f"Processed category: {decrypted_category}")
-                except Exception as e:
-                    print(f"Error processing category: {str(e)}")
+            for trans in transactions:
+                category = self.encrypt.decrypt_text(trans[0])  # Decrypt category
+                trans_type = self.encrypt.decrypt_text(trans[1])  # Decrypt transaction type
+                
+                # Filter based on mode
+                if mode == 1 and trans_type not in ['Withdrawal', 'Transfer']:
+                    continue
+                elif mode == 2 and trans_type != 'Deposit':
+                    continue
+                elif mode not in [1, 2]:
+                    # Include all transactions for other modes
+                    pass
+                    
+                if category not in categories:
+                    categories[category] = 0
+                categories[category] += 1
+                total_count += 1
             
-            return decrypted_result
+            if total_count == 0:
+                print(f"No transactions found for mode {mode}")
+                return []
+            
+            # Calculate percentages
+            result = []
+            for category, count in categories.items():
+                percentage = round((count * 100.0 / total_count), 2)
+                result.append((category, count, percentage))
+            
+            # Sort by count in descending order
+            result.sort(key=lambda x: x[1], reverse=True)
+            
+            print(f"Processed {len(result)} categories for mode {mode}")
+            for cat in result:
+                print(f"Category: {cat[0]}, Count: {cat[1]}, Percentage: {cat[2]}%")
+                
+            return result
             
         except Exception as e:
             print(f"Error getting category percentages: {str(e)}")
@@ -486,9 +495,9 @@ def get_account_transactions(limit=5, offset=0):
         return []
 
 @eel.expose
-def get_account_transactions_by_category(category, limit=5, offset=0):
+def get_account_transactions_by_category(category, mode, limit=5, offset=0):
     account_id = ar.get_acc_id_with_attr('email', eel.get_cookie('email')())
-    return tr.get_account_transactions_by_category(account_id, category, limit, offset)
+    return tr.get_account_transactions_by_category(account_id, category, mode, limit, offset)
 
 @eel.expose
 def get_latest_balance():
@@ -501,11 +510,7 @@ def get_transaction_count():
     return tr.get_transaction_count(account_id)
 
 @eel.expose
-def get_category_percentages():
-    mode = 1
+def get_category_percentages(mode):
 
     account_id = ar.get_acc_id_with_attr('email', eel.get_cookie('email')())
-    if mode == 1: # return percentages
-        return tr.get_category_percentages(account_id)
-    #elif mode == 2:
-    #    return tr.
+    return tr.get_category_percentages(account_id, mode)

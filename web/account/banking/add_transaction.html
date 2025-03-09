@@ -40,7 +40,7 @@
     <form id="add-transaction-form"> <!--User fills out boxes to add their varying transactions-->
         <div>
             <label for="transaction_type">Transaction Type:</label>
-            <select id="transaction_type" name="transaction_type" onchange="togglePurchaseType()" required>
+            <select id="transaction_type" name="transaction_type" required>
                 <option value="Select" disabled selected>Select One</option>
                 <option value="Deposit">Deposit</option>
                 <option value="Withdrawal">Withdrawal</option>
@@ -53,9 +53,9 @@
             <input type="text" id="amount" name="amount" required>
         </div>
         <br>
-        <div>
+        <div id="withdrawal-fields" style="display: none;">
             <label for="transaction_name">Type of Purchase:</label>
-            <select id="transaction_name" name="transaction_name" required>
+            <select id="transaction_name" name="transaction_name">
                 <option value="Select" disabled selected>Select One</option>
                 <option value="House & Utilities">Housing & Utilities</option>
                 <option value="Food">Food</option>
@@ -63,6 +63,17 @@
                 <option value="Health">Health</option>
                 <option value="Finance">Finance</option>
                 <option value="Entertainment">Entertainment</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+        <div id="deposit-fields" style="display: none;">
+            <label for="deposit_type">Source of Deposit:</label>
+            <select id="deposit_type" name="transaction_name">
+                <option value="Select" disabled selected>Select One</option>
+                <option value="Income">Income/Salary</option>
+                <option value="Investment">Investment Returns</option>
+                <option value="Refund">Refund</option>
+                <option value="Gift">Gift</option>
                 <option value="Other">Other</option>
             </select>
         </div>
@@ -78,5 +89,33 @@
         </div>
         <br>
         <button type="submit">Submit</button>
+    </form>
+
+    <script>
+        function toggleTransactionFields() {
+            const transactionType = document.getElementById('transaction_type').value;
+            const withdrawalFields = document.getElementById('withdrawal-fields');
+            const depositFields = document.getElementById('deposit-fields');
+            
+            if (transactionType === 'Deposit') {
+                withdrawalFields.style.display = 'none';
+                depositFields.style.display = 'block';
+                depositFields.querySelector('select').required = true;
+                withdrawalFields.querySelector('select').required = false;
+            } else {
+                withdrawalFields.style.display = 'block';
+                depositFields.style.display = 'none';
+                withdrawalFields.querySelector('select').required = true;
+                depositFields.querySelector('select').required = false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const transactionTypeSelect = document.getElementById('transaction_type');
+            transactionTypeSelect.addEventListener('change', toggleTransactionFields);
+            toggleTransactionFields();
+        });
+    </script>
+
     </body>
     </html>

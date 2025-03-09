@@ -61,15 +61,26 @@ export function createPieChart(id, xlabels, ydata, title, onClick) {
     return chart;
 }
 
-export function createPurchasePieChartByPercent(id) {
-    eel.get_category_percentages()(function(data) {
+export function createPurchasePieChartByPercent(id, mode) {
+    eel.get_category_percentages(mode)(function(data) {
         const xlabels = data.map(item => item[0] || 'Uncategorized');
         const ydata = data.map(item => item[2]);
-        const title = "Purchase Categories by Percentage"
-
+        var title;
+        if (mode == 1){
+            title = "Purchase Categories by Percentage";
+        }
+        else if (mode == 2){
+            title = "Deposit Categories by Percentage";
+        }
         const handleClick = (label, value) => {
             console.log(`Clicked on category ${label} with value ${value}`);
-            const tableContainer = document.getElementById('table-container');
+            var tableContainer;
+            if (mode == 1){
+                tableContainer = document.getElementById('table-container-1');
+            }
+            else if (mode == 2){
+                tableContainer = document.getElementById('table-container-2');
+            }
             if (!tableContainer) {
                 console.error("Could not find element");
                 return;
@@ -81,7 +92,7 @@ export function createPurchasePieChartByPercent(id) {
             tableContainer.appendChild(loadingMessage);
             
             // Create the table
-            const table = budgetingTransactionsTable(label);
+            const table = budgetingTransactionsTable(label, mode);
         };
 
         const chart = createPieChart(id, xlabels, ydata, title, handleClick);

@@ -50,13 +50,14 @@
         gap: 2rem;
         padding: 2rem;
         align-items: start;
+        border-radius: 10px;
         background-color: #B5E2FF;
         }
 
         .chart-container {
             background: white;
             padding: 1.5rem;
-            border-radius: 8px;
+            border-radius: 10px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
@@ -71,6 +72,7 @@
 
         .goals-section {
             padding: 2rem;
+            border-radius: 10px;
             background-color: #B5E2FF;
         }
         
@@ -128,15 +130,14 @@
 
     <web-header></web-header>
 
-    <h1>Budgeting</h1>
-
     <script type="module">
-        import { createPurchasePieChartByPercent } from './js/pie_chart.js';
+        import { createPurchasePieChartByPercent } from '../js/pie_chart.js';
         import { getCookie } from './js/cookie.js';
         
         if (getCookie('email') != undefined) {
             document.addEventListener('DOMContentLoaded', function() {
-                const myChart = createPurchasePieChartByPercent('myChart');
+                const withdrawalsChart = createPurchasePieChartByPercent('withdrawalsChart', 1);
+                const depositsChart = createPurchasePieChartByPercent('depositsChart', 2);
             });
         }
         else {
@@ -150,22 +151,33 @@
         <h1 style="color: black;">You are not logged in. Please log in to access this page.</h1>
     </div>
     <div class="dashboard-container">
+        <h1>Budgeting</h1>
+        <br>
         <div class="chart-container" style="width:100%; max-width:350px; margin:0 auto;"> 
         <!--Change max-width for pie chart here; adjust by preference-->
-            <canvas id="myChart"></canvas>
+            <canvas id="withdrawalsChart"></canvas>
         </div>
 
-        <div class="table-container" id="table-container">Select a category from the pie chart.</div>
+        <div class="table-container" id="table-container-1">Select a category from the pie chart.</div>
+
+        <div class="chart-container" style="width:100%; max-width:350px; margin:0 auto;"> 
+        <!--Change max-width for pie chart here; adjust by preference-->
+            <canvas id="depositsChart"></canvas>
+        </div>
+
+        <div class="table-container" id="table-container-2">Select a category from the pie chart.</div>
 
         
 
     </div>
 
+    <br>
+
     <div class="goals-section">
         <h2>Financial Goals</h2>
         <div class="goals-container">
             <div class="goals-controls">
-                <button id="addGoalBtn" class="btn btn-primary">Add New Goal</button>
+                <button id="addGoalBtn" class="btn btn-primary" onclick="window.location.href='goals/add_goals.html'">Add New Goal</button>
             </div>
             <div class="goals-table-container">
                 <table class="table table-striped table-bordered table-hover">
@@ -186,5 +198,7 @@
             </div>
         </div>
     </div>
+
+    <br>
 </body>
 </html>

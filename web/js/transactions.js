@@ -1,4 +1,4 @@
-export function budgetingTransactionsTable(category) {
+export function budgetingTransactionsTable(category, mode) {
     const wrapper = document.createElement('div');
     wrapper.classList.add('table-responsive');
     wrapper.style.cssText = `
@@ -17,6 +17,7 @@ export function budgetingTransactionsTable(category) {
     const thead = document.createElement('thead');
     thead.classList.add('thead-dark', 'sticky-top');
     const headerRow = document.createElement('tr');
+    
     const headers = ['ID', 'Type', 'Amount', 'Date', 'Description'];
     const columnWidths = ['17.5%', '17.5%', '17.5%', '17.5%', '30%'];
     
@@ -37,7 +38,7 @@ export function budgetingTransactionsTable(category) {
 
     const tbody = document.createElement('tbody');
     
-    eel.get_account_transactions_by_category(category)(function(transactions) {
+    eel.get_account_transactions_by_category(category, mode)(function(transactions) {
         console.log("Received transactions for category:", category, transactions);
         
         if (!transactions || transactions.length === 0) {
@@ -83,7 +84,14 @@ export function budgetingTransactionsTable(category) {
         }
         
         table.appendChild(tbody);
-        const container = document.getElementById('table-container');
+
+        var container;
+        if (mode == 1){
+            container = document.getElementById('table-container-1');
+        }
+        else if (mode == 2){
+            container = document.getElementById('table-container-2');
+        }
         if (container) {
             container.innerHTML = '';
             container.appendChild(wrapper);
