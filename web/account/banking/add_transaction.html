@@ -16,22 +16,46 @@
 <body>
 
     <script type="module"> 
-             function togglePurchaseType() {
-                 const transactionType = document.getElementById('transaction_type').value;
-                 const purchaseTypeField = document.getElementById('purchase-type-field');
-                 if (transactionType === 'Deposit') {
-                     purchaseTypeField.style.display = 'none';
-                 } else {
-                     purchaseTypeField.style.display = 'block';
-                 }
-             }
-             document.addEventListener('DOMContentLoaded', function () {
-                const transactionTypeSelect = document.getElementById('transaction_type');
-                transactionTypeSelect.addEventListener('change', togglePurchaseType);
-                togglePurchaseType();
-            });
-         </script>
+        function togglePurchaseType() { // changes purchase type after user selection
+                const transactionType = document.getElementById('transaction_type').value;
+                const purchaseTypeField = document.getElementById('purchase-type-field');
+                if (transactionType === 'Deposit') {
+                    purchaseTypeField.style.display = 'none';
+                } else {
+                    purchaseTypeField.style.display = 'block';
+                }
+            }
+            document.addEventListener('DOMContentLoaded', function () { //detects user selection in purchase type dropdown
+            const transactionTypeSelect = document.getElementById('transaction_type');
+            transactionTypeSelect.addEventListener('change', togglePurchaseType);
+            togglePurchaseType();
+        });
 
+
+        function toggleTransactionFields() { // changes transaction type after user selection
+            const transactionType = document.getElementById('transaction_type').value;
+            const withdrawalFields = document.getElementById('withdrawal-fields');
+            const depositFields = document.getElementById('deposit-fields');
+            
+            if (transactionType === 'Deposit') {
+                withdrawalFields.style.display = 'none';
+                depositFields.style.display = 'block';
+                depositFields.querySelector('select').required = true;
+                withdrawalFields.querySelector('select').required = false;
+            } else {
+                withdrawalFields.style.display = 'block';
+                depositFields.style.display = 'none';
+                withdrawalFields.querySelector('select').required = true;
+                depositFields.querySelector('select').required = false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() { //detects user selection in transaction type dropdown
+            const transactionTypeSelect = document.getElementById('transaction_type');
+            transactionTypeSelect.addEventListener('change', toggleTransactionFields);
+            toggleTransactionFields();
+        });
+         </script>
 
     <web-header></web-header>
 
@@ -90,32 +114,6 @@
         <br>
         <button type="submit">Submit</button>
     </form>
-
-    <script>
-        function toggleTransactionFields() {
-            const transactionType = document.getElementById('transaction_type').value;
-            const withdrawalFields = document.getElementById('withdrawal-fields');
-            const depositFields = document.getElementById('deposit-fields');
-            
-            if (transactionType === 'Deposit') {
-                withdrawalFields.style.display = 'none';
-                depositFields.style.display = 'block';
-                depositFields.querySelector('select').required = true;
-                withdrawalFields.querySelector('select').required = false;
-            } else {
-                withdrawalFields.style.display = 'block';
-                depositFields.style.display = 'none';
-                withdrawalFields.querySelector('select').required = true;
-                depositFields.querySelector('select').required = false;
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const transactionTypeSelect = document.getElementById('transaction_type');
-            transactionTypeSelect.addEventListener('change', toggleTransactionFields);
-            toggleTransactionFields();
-        });
-    </script>
-
     </body>
     </html>
+    <!--html to make the options in all the dropdowns and the buttons appear-->

@@ -1,3 +1,4 @@
+/*general styling and positioning for transactions page*/
 body {
     font-family: 'Inter', sans-serif;
     background-color: #f4f4f9;
@@ -45,6 +46,7 @@ select {
     transition: border-color 0.3s, box-shadow 0.3s;
 }
 
+/*zoom in effect for input fields*/
 input[type="text"]:focus,
 input[type="date"]:focus,
 select:focus {
@@ -63,6 +65,7 @@ button[type="submit"] {
     transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
 }
 
+/*hover effect for the submit button*/
 button[type="submit"]:hover {
     background-color: #357ABD;
     transform: scale(1.05);

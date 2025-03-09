@@ -514,3 +514,12 @@ def get_category_percentages(mode):
 
     account_id = ar.get_acc_id_with_attr('email', eel.get_cookie('email')())
     return tr.get_category_percentages(account_id, mode)
+
+
+class goals_reader:
+    def __init__(self):
+        connection = sqlite3.connect('sqlite/fbla-db.db')
+        self.cursor = connection.cursor()
+        self.ar = account_reader()
+        self.tr = transaction_reader()
+        self.encrypt = enc
