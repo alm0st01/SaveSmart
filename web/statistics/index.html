@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+    <link rel="stylesheet" href="css/default.css">
+    <link rel="stylesheet" href="css/transactions.css">
+    <link rel="stylesheet" href="css/transactiontable.css">
+    <script src="js/template.js" type="module" defer></script>
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/charts.js" type="module"></script>
+    <script src="js/transactions.js" type="module"></script>
+    <script src="js/cookie.js" type="module"></script>
+    <title>Statistics</title>
+</head>
+<body>
+    <style>
+        .sticky-top {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background-color: inherit;
+        }
+
+        .table-responsive::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #97CADB;
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #7AB8CD;
+        }
+
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: minmax(300px, 500px) 1fr;
+            gap: 2rem;
+            padding: 2rem;
+            align-items: start;
+            border-radius: 10px;
+            background-color: #B5E2FF;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .chart-container h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #333;
+        }
+
+        .table-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-height: 800px;
+            overflow-y: auto;
+        }
+    </style>
+
+    <web-header></web-header>
+
+    <script type="module">
+        import { createPurchasePieChartByPercent, createBalanceLineChart } from '../js/charts.js';
+        import { getCookie } from '../js/cookie.js';
+        
+        if (getCookie('email') != undefined) {
+            document.addEventListener('DOMContentLoaded', function() {
+                const withdrawalsChart = createPurchasePieChartByPercent('withdrawalsChart', 1);
+                const depositsChart = createPurchasePieChartByPercent('depositsChart', 2);
+                const balanceChart = createBalanceLineChart('balanceChart');
+            });
+        }
+        else {
+            const userNotLoggedIn = document.querySelector('#userNotLoggedIn');
+            userNotLoggedIn.style.display = "inherit";
+        }
+    </script>
+    
+    <div style="display: none;" id="userNotLoggedIn">
+        <h1 style="color: black;">You are not logged in. Please log in to access this page.</h1>
+    </div>
+
+    <div class="dashboard-container">
+        <h1>Statistics</h1>
+        <br>
+        <div class="chart-container" style="width:100%; max-width:350px; margin:0 auto;"> 
+            <h2>Withdrawals by Category</h2>
+            <canvas id="withdrawalsChart"></canvas>
+        </div>
+
+        <div class="table-container" id="table-container-1">Select a category from the pie chart.</div>
+
+        <div class="chart-container" style="width:100%; max-width:350px; margin:0 auto;"> 
+            <h2>Deposits by Category</h2>
+            <canvas id="depositsChart"></canvas>
+        </div>
+
+        <div class="table-container" id="table-container-2">Select a category from the pie chart.</div>
+
+        <!-- Moved balance history chart to bottom -->
+        <div class="chart-container" style="width:80%; max-width:800px; margin:20px auto 0; grid-column: 1 / -1;">
+            <h2>Balance History</h2>
+            <canvas id="balanceChart"></canvas>
+        </div>
+    </div>
+</body>
+</html>

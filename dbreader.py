@@ -198,8 +198,15 @@ class transaction_reader:
             elif transaction_type == "Withdrawal" or transaction_type == "Transfer":
                 new_balance -= amt
 
-
-            transaction_id = str(randint(10**8, (10**9)-1))
+            # Keep trying until we get a unique transaction_id
+            while True:
+                transaction_id = str(randint(10**8, (10**9)-1))
+                enc_transaction_id = self.encrypt.encrypt_text(transaction_id)
+                
+                # Check if transaction_id already exists
+                transact_id_query = self.cursor.execute("SELECT * FROM transactions WHERE transaction_id = ?", (enc_transaction_id,))
+                if not transact_id_query.fetchone():
+                    break
 
             # Encrypt all values for storage
             enc_transaction_type = self.encrypt.encrypt_text(transaction_type)
@@ -208,18 +215,10 @@ class transaction_reader:
             enc_name = self.encrypt.encrypt_text(name)
             enc_description = self.encrypt.encrypt_text(description)
             enc_new_balance = self.encrypt.encrypt_text(str(new_balance))
-            enc_transaction_id = self.encrypt.encrypt_text(transaction_id)
-            # Don't re-encrypt account_id since it's already encrypted
-
-            transact_id_query = self.cursor.execute("SELECT * FROM transactions WHERE transaction_id = ?", (enc_transaction_id,))
-            transact_id_exists = transact_id_query.fetchone()
-
-            if transact_id_exists:
-                self.add_transaction(transaction_type, amount, transaction_date, name, description)
             
             self.cursor.execute('''
                 INSERT INTO transactions 
-                (transaction_id,account_id, transaction_type, amount, transaction_date, transaction_name, description, balance_after) 
+                (transaction_id, account_id, transaction_type, amount, transaction_date, transaction_name, description, balance_after) 
                 VALUES (?,?,?,?,?,?,?,?)
             ''', (enc_transaction_id, account_id, enc_transaction_type, enc_amount, enc_transaction_date, enc_name, enc_description, enc_new_balance))
             
@@ -239,7 +238,7 @@ class transaction_reader:
                 SELECT transaction_id, transaction_type, amount, transaction_date, transaction_name, description 
                 FROM transactions 
                 WHERE account_id = ? 
-                ORDER BY transaction_date DESC, transaction_id DESC
+                ORDER BY transaction_date ASC, transaction_id ASC
                 LIMIT ? OFFSET ?
             '''
             print(f"Executing query with account_id: {account_id}, limit: {limit}, offset: {offset}")
@@ -436,10 +435,347 @@ class transaction_reader:
             print(f"Error getting category percentages: {str(e)}")
             return []
 
-        
+    def get_monthly_averages(self, account_id):
+        try:
+            result = self.cursor.execute('''
+                SELECT transaction_date, amount, transaction_type
+                FROM transactions 
+                WHERE account_id = ?
+                ORDER BY transaction_date
+            ''', (account_id,))
+            
+            transactions = result.fetchall()
+            if not transactions:
+                return {'avg_gains': 0, 'avg_losses': 0, 'avg_net': 0}
+
+            # Group transactions by month and calculate sums
+            monthly_totals = {}
+            for trans_date, amount, trans_type in transactions:
+                try:
+                    date = self.encrypt.decrypt_text(trans_date)
+                    amount = float(self.encrypt.decrypt_text(amount))
+                    trans_type = self.encrypt.decrypt_text(trans_type)
+                    month = date[:7]  # Get YYYY-MM format
+                    
+                    if month not in monthly_totals:
+                        monthly_totals[month] = {'gains': 0, 'losses': 0}
+                    
+                    # Deposits are gains, Withdrawals and Transfers are losses
+                    if trans_type == "Deposit":
+                        monthly_totals[month]['gains'] += amount
+                    else:  # Withdrawal or Transfer
+                        monthly_totals[month]['losses'] -= amount  # Make losses negative
+                except Exception as e:
+                    print(f"Error processing transaction: {str(e)}")
+                    continue
+
+            # Calculate averages
+            if monthly_totals:
+                num_months = len(monthly_totals)
+                total_gains = sum(month['gains'] for month in monthly_totals.values())
+                total_losses = sum(month['losses'] for month in monthly_totals.values())
+                
+                return {
+                    'avg_gains': total_gains / num_months,
+                    'avg_losses': total_losses / num_months,  # Will be negative
+                    'avg_net': (total_gains + total_losses) / num_months
+                }
+            
+            return {'avg_gains': 0, 'avg_losses': 0, 'avg_net': 0}
+        except Exception as e:
+            print(f"Error getting monthly averages: {str(e)}")
+            return {'avg_gains': 0, 'avg_losses': 0, 'avg_net': 0}
+
+class goals_reader:
+    def __init__(self):
+        connection = sqlite3.connect('sqlite/fbla-db.db')
+        self.cursor = connection.cursor()
+        self.ar = account_reader()
+        self.tr = transaction_reader()
+        self.encrypt = enc
+
+    def add_goal(self, goal_name, target_amount, emergency_funds, due_date):
+        try:
+            # Get the email from cookie without encrypting it again
+            email = eel.get_cookie('email')()
+            account_id = self.ar.get_acc_id_with_attr('email', email)
+            
+            if account_id is None:
+                print("Error: Could not find account ID")
+                return False
+
+            # Keep trying until we get a unique goal_id
+            while True:
+                goal_id = str(randint(10**8, (10**9)-1))
+                enc_goal_id = self.encrypt.encrypt_text(goal_id)
+                
+                # Check if goal_id already exists
+                goal_id_query = self.cursor.execute("SELECT * FROM goals WHERE goal_id = ?", (enc_goal_id,))
+                if not goal_id_query.fetchone():
+                    break
+
+            # Encrypt all values for storage
+            enc_goal_name = self.encrypt.encrypt_text(goal_name)
+            enc_target_amount = self.encrypt.encrypt_text(str(target_amount))
+            enc_emergency_funds = self.encrypt.encrypt_text(str(emergency_funds))
+            enc_due_date = self.encrypt.encrypt_text(due_date)
+
+            print("Adding goal with values:", {
+                "name": goal_name,
+                "target_amount": target_amount,
+                "emergency_funds": emergency_funds,
+                "due_date": due_date
+            })
+            
+            self.cursor.execute('''
+                INSERT INTO goals 
+                (goal_id, account_id, goal_name, target_amount, emergency_funds, due_date) 
+                VALUES (?,?,?,?,?,?)
+            ''', (enc_goal_id, account_id, enc_goal_name, enc_target_amount, enc_emergency_funds, enc_due_date))
+            
+            self.cursor.connection.commit()
+            print(f"Successfully added goal for account {account_id}")
+            return True
+            
+        except Exception as e:
+            print(f"Error adding goal: {str(e)}")
+            return False
+
+    def get_goals(self, account_id):
+        try:
+            print(f"Getting goals for account_id: {account_id}")
+            
+            self.cursor.execute('''
+                SELECT goal_id, goal_name, target_amount, emergency_funds, due_date
+                FROM goals 
+                WHERE account_id = ?
+                ORDER BY due_date ASC
+            ''', (account_id,))
+            
+            result = self.cursor.fetchall()
+            if not result:
+                print("No goals found")
+                return []
+                
+            decrypted_result = []
+            for row in result:
+                try:
+                    decrypted_row = []
+                    for value in row:
+                        if value is not None:
+                            decrypted_value = self.encrypt.decrypt_text(value)
+                            decrypted_row.append(decrypted_value)
+                        else:
+                            decrypted_row.append(None)
+                    decrypted_result.append(decrypted_row)
+                except Exception as e:
+                    print(f"Error decrypting goal: {str(e)}")
+                    continue
+            
+            print(f"Retrieved {len(decrypted_result)} goals")
+            return decrypted_result
+            
+        except Exception as e:
+            print(f"Error getting goals: {str(e)}")
+            return []
+
+    def delete_goal(self, goal_id):
+        try:
+            # Get the email from cookie without encrypting it again
+            email = eel.get_cookie('email')()
+            account_id = self.ar.get_acc_id_with_attr('email', email)
+            
+            if account_id is None:
+                print("Error: Could not find account ID")
+                return False
+
+            # Get all goals for this account
+            self.cursor.execute('''
+                SELECT goal_id, account_id 
+                FROM goals 
+                WHERE account_id = ?
+            ''', (account_id,))
+            
+            goals = self.cursor.fetchall()
+            target_goal_id = None
+            
+            # Find the matching goal by decrypting each ID
+            for goal in goals:
+                encrypted_id = goal[0]
+                try:
+                    decrypted_id = self.encrypt.decrypt_text(encrypted_id)
+                    if decrypted_id == goal_id:
+                        target_goal_id = encrypted_id
+                        break
+                except Exception as e:
+                    print(f"Error decrypting goal ID: {str(e)}")
+                    continue
+            
+            if target_goal_id is None:
+                print(f"No goal found with ID {goal_id}")
+                return False
+                
+            # Delete the goal using the encrypted ID
+            self.cursor.execute('''
+                DELETE FROM goals 
+                WHERE goal_id = ? AND account_id = ?
+            ''', (target_goal_id, account_id))
+            
+            self.cursor.connection.commit()
+            deleted = self.cursor.rowcount > 0
+            
+            if deleted:
+                print(f"Successfully deleted goal {goal_id}")
+            else:
+                print(f"Failed to delete goal {goal_id}")
+                
+            return deleted
+            
+        except Exception as e:
+            print(f"Error deleting goal: {str(e)}")
+            return False
+
+    def rename_goal(self, goal_id, new_name):
+        try:
+            # Get the email from cookie without encrypting it again
+            email = eel.get_cookie('email')()
+            account_id = self.ar.get_acc_id_with_attr('email', email)
+            
+            if account_id is None:
+                print("Error: Could not find account ID")
+                return False
+
+            # Get all goals for this account
+            self.cursor.execute('''
+                SELECT goal_id, account_id 
+                FROM goals 
+                WHERE account_id = ?
+            ''', (account_id,))
+            
+            goals = self.cursor.fetchall()
+            target_goal_id = None
+            
+            # Find the matching goal by decrypting each ID
+            for goal in goals:
+                encrypted_id = goal[0]
+                try:
+                    decrypted_id = self.encrypt.decrypt_text(encrypted_id)
+                    if decrypted_id == goal_id:
+                        target_goal_id = encrypted_id
+                        break
+                except Exception as e:
+                    print(f"Error decrypting goal ID: {str(e)}")
+                    continue
+            
+            if target_goal_id is None:
+                print(f"No goal found with ID {goal_id}")
+                return False
+
+            # Encrypt the new name
+            enc_new_name = self.encrypt.encrypt_text(new_name)
+                
+            # Update the goal name using the encrypted ID
+            self.cursor.execute('''
+                UPDATE goals 
+                SET goal_name = ?
+                WHERE goal_id = ? AND account_id = ?
+            ''', (enc_new_name, target_goal_id, account_id))
+            
+            self.cursor.connection.commit()
+            updated = self.cursor.rowcount > 0
+            
+            if updated:
+                print(f"Successfully renamed goal {goal_id}")
+            else:
+                print(f"Failed to rename goal {goal_id}")
+                
+            return updated
+            
+        except Exception as e:
+            print(f"Error renaming goal: {str(e)}")
+            return False
+
+    def edit_goal(self, goal_id, new_name, target_amount, emergency_funds, due_date):
+        try:
+            print(f"Received edit request with values: goal_id={goal_id}, new_name={new_name}, target_amount={target_amount}, emergency_funds={emergency_funds}, due_date={due_date}")
+            
+            # Get the email from cookie without encrypting it again
+            email = eel.get_cookie('email')()
+            account_id = self.ar.get_acc_id_with_attr('email', email)
+            
+            if account_id is None:
+                print("Error: Could not find account ID")
+                return False
+
+            # Get all goals for this account to find the encrypted goal_id
+            self.cursor.execute('''
+                SELECT goal_id, account_id 
+                FROM goals 
+                WHERE account_id = ?
+            ''', (account_id,))
+            
+            goals = self.cursor.fetchall()
+            target_goal_id = None
+            
+            # Find the matching goal by decrypting each ID
+            for goal in goals:
+                encrypted_id = goal[0]
+                try:
+                    decrypted_id = self.encrypt.decrypt_text(encrypted_id)
+                    print(f"Comparing goal IDs: {decrypted_id} vs {goal_id}")
+                    if decrypted_id == goal_id:
+                        target_goal_id = encrypted_id
+                        print(f"Found matching goal ID: {target_goal_id}")
+                        break
+                except Exception as e:
+                    print(f"Error decrypting goal ID: {str(e)}")
+                    continue
+            
+            if target_goal_id is None:
+                print(f"No goal found with ID {goal_id}")
+                return False
+
+            # Encrypt the new values
+            enc_new_name = self.encrypt.encrypt_text(new_name)
+            enc_target_amount = self.encrypt.encrypt_text(str(target_amount))
+            enc_emergency_funds = self.encrypt.encrypt_text(str(emergency_funds))
+            enc_due_date = self.encrypt.encrypt_text(due_date)
+
+            print("Executing update query with values:", {
+                "name": new_name,
+                "target_amount": target_amount,
+                "emergency_funds": emergency_funds,
+                "due_date": due_date,
+                "goal_id": target_goal_id,
+                "account_id": account_id
+            })
+
+            # Update the goal using the encrypted goal_id
+            self.cursor.execute('''
+                UPDATE goals 
+                SET goal_name = ?, target_amount = ?, emergency_funds = ?, due_date = ?
+                WHERE goal_id = ? AND account_id = ?
+            ''', (enc_new_name, enc_target_amount, enc_emergency_funds, enc_due_date, target_goal_id, account_id))
+            
+            self.cursor.connection.commit()
+            updated = self.cursor.rowcount > 0
+            
+            print(f"Update result: {updated}")
+            
+            if updated:
+                print(f"Successfully edited goal {goal_id}")
+            else:
+                print(f"Failed to edit goal {goal_id}")
+                
+            return updated
+            
+        except Exception as e:
+            print(f"Error editing goal: {str(e)}")
+            return False
 
 ar = account_reader()
 tr = transaction_reader()
+gr = goals_reader()
 
 @eel.expose
 def getattrwithattr(reqattr, attr1, val1):
@@ -515,11 +851,38 @@ def get_category_percentages(mode):
     account_id = ar.get_acc_id_with_attr('email', eel.get_cookie('email')())
     return tr.get_category_percentages(account_id, mode)
 
+@eel.expose
+def add_goal(goal_name, target_amount, emergency_funds, due_date):
+    return gr.add_goal(goal_name, target_amount, emergency_funds, due_date)
 
-class goals_reader:
-    def __init__(self):
-        connection = sqlite3.connect('sqlite/fbla-db.db')
-        self.cursor = connection.cursor()
-        self.ar = account_reader()
-        self.tr = transaction_reader()
-        self.encrypt = enc
+@eel.expose
+def get_goals():
+    account_id = ar.get_acc_id_with_attr('email', eel.get_cookie('email')())
+    return gr.get_goals(account_id)
+
+@eel.expose
+def delete_goal(goal_id):
+    return gr.delete_goal(goal_id)
+
+@eel.expose
+def rename_goal(goal_id, new_name):
+    return gr.rename_goal(goal_id, new_name)
+
+@eel.expose
+def edit_goal(goal_id, new_name, target_amount, emergency_funds, due_date):
+    return gr.edit_goal(goal_id, new_name, target_amount, emergency_funds, due_date)
+
+@eel.expose
+def get_monthly_averages():
+    try:
+        print("Starting get_monthly_averages...")
+        email = eel.get_cookie('email')()
+        print(f"Got email: {email}")
+        account_id = ar.get_acc_id_with_attr('email', email)
+        print(f"Got account_id: {account_id}")
+        result = tr.get_monthly_averages(account_id)
+        print(f"Monthly averages result: {result}")
+        return result
+    except Exception as e:
+        print(f"Error in get_monthly_averages: {str(e)}")
+        return {'avg_gains': 0, 'avg_losses': 0, 'avg_net': 0}

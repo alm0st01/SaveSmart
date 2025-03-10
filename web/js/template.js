@@ -18,7 +18,8 @@ class webheader extends HTMLElement {
                     <button class="headerbutton" id="loginbutton" onclick="window.location.href='account/auth/login/login.html'">Login</button>
                     <button class="headerbutton" id="signupbutton" onclick="window.location.href='account/auth/signup/index.html'">Signup</button>
                     <button class="headerbutton" id="accountbutton" onclick="window.location.href='account/banking/index.html'">Account</button>
-                    <button class="headerbutton" id="helpbutton" onclick="window.location.href='goals/index.html'">Budgeting & Goals</button>
+                    <button class="headerbutton" id="statsbutton" onclick="window.location.href='statistics/index.html'">Statistics</button>
+                    <button class="headerbutton" id="goalsbutton" onclick="window.location.href='goals/index.html'">Financial Goals</button>
                     <button class="headerbutton" id="logoutbutton" onclick="window.logout()">Logout</button>
                     <!--<button class="search-btn" onclick="alert('The search feature is currently unavailable.')">
                         <img src="images/search.png" class="search-icon">
@@ -31,10 +32,11 @@ class webheader extends HTMLElement {
         const attribute = 'fname';
         const isLoggedIn = getCookie(attribute) && document.cookie.includes(attribute+'=');
         const accountButton = this.querySelector('#accountbutton');
-        const helpButton = this.querySelector('#helpbutton');
+        const goalsButton = this.querySelector('#goalsbutton');
         const loginButton = this.querySelector('#loginbutton');
         const signupButton = this.querySelector('#signupbutton');
         const logoutButton = this.querySelector('#logoutbutton');
+        const statsButton = this.querySelector('#statsbutton');
         if (isLoggedIn) {
             accountButton.textContent = getCookie(attribute)+"'s Account";
             loginButton.style.display = 'none';
@@ -42,9 +44,9 @@ class webheader extends HTMLElement {
         }
         else {
             accountButton.style.display = 'none';
-            helpButton.style.display = 'none';
+            goalsButton.style.display = 'none';
             logoutButton.style.display = 'none';
-            
+            statsButton.style.display = 'none';
         }
 
         
@@ -52,18 +54,6 @@ class webheader extends HTMLElement {
         
         var activeButton;
 
-        if (title == "Help"){
-            activeButton = this.querySelector('#helpbutton');
-            activeButton.className = "headerbutton active";
-        }
-        else if (title == "Signup"){
-            activeButton = this.querySelector('#signupbutton');
-            activeButton.className = "headerbutton active";
-        }
-        else if (title == "Login"){
-            activeButton = this.querySelector('#loginbutton');
-            activeButton.className = "headerbutton active";
-        }
     }
 }
 

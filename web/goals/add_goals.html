@@ -88,7 +88,68 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Any additional JavaScript for handling form submission or other interactions can go here
+            const form = document.getElementById('add-goal-form');
+            const resultDiv = document.getElementById('calculation-result');
+            const progressBar = document.querySelector('.progress');
+            const progressBarInner = document.querySelector('.progress-bar');
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const currentBalance = await eel.get_latest_balance()();
+                const calculator = new GoalCalculator(currentBalance);
+
+                const result = calculator.calculatePlan(
+                    form.goal_name.value,
+                    form.target_amount.value,
+                    form.emergency_funds.value,
+                    form.due_date.value
+                );
+
+                if (!result.success) {
+                    resultDiv.className = 'alert alert-danger';
+                    resultDiv.textContent = result.message;
+                    resultDiv.style.display = 'block';
+                    progressBar.style.display = 'none';
+                    return;
+                }
+
+                const goalAdded = await addGoal(
+                    form.goal_name.value,
+                    form.target_amount.value,
+                    form.emergency_funds.value,
+                    form.due_date.value
+                );
+
+                if (goalAdded) {
+                    let message = '';
+                    if (result.canBuyNow) {
+                        message = `Goal added successfully! You can buy ${form.goal_name.value} now while maintaining your emergency fund!`;
+                    } else {
+                        message = `Goal added successfully!\n\nTo buy ${form.goal_name.value} by the target date:\n` +
+                                 `• You need to save $${result.remainingToSave.toFixed(2)} more\n` +
+                                 `• Daily savings needed: $${result.dailySavingsNeeded.toFixed(2)}\n` +
+                                 `• Days until target: ${result.daysUntilTarget}`;
+                    }
+
+                    resultDiv.className = 'alert alert-success';
+                    resultDiv.textContent = message;
+                    
+                    form.reset();
+
+                    setTimeout(() => {
+                        window.location.href = '../goals/index.html';
+                    }, 2000);
+                } else {
+                    resultDiv.className = 'alert alert-danger';
+                    resultDiv.textContent = 'Error adding goal. Please try again.';
+                }
+
+                resultDiv.style.display = 'block';
+                progressBar.style.display = 'block';
+                progressBarInner.style.width = `${result.progress}%`;
+                progressBarInner.textContent = `${Math.round(result.progress)}%`;
+            });
         });
     </script>
 

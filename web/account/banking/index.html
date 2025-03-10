@@ -15,16 +15,56 @@
 </head>
 <body>
     <script>
-        document.addEventListener('DOMContentLoaded', function () { //detects change in balance and stores it
-            const tableContainer = document.getElementById('table-container');
-            const table = window.transactionsTable(5);
-            tableContainer.appendChild(table);
-        
-            eel.get_latest_balance()(function(balance) {
-                const currentBalance = document.getElementById('current-balance');
-                currentBalance.textContent = `$${balance.toFixed(2)}`;
+        // Add check for Eel initialization
+        function waitForEel() {
+            return new Promise((resolve, reject) => {
+                const checkEel = () => {
+                    if (window.eel) {
+                        console.log("Eel initialized successfully");
+                        resolve();
+                    } else {
+                        console.log("Waiting for Eel...");
+                        setTimeout(checkEel, 100);
+                    }
+                };
+                checkEel();
             });
+        }
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            try {
+                // Wait for Eel to initialize
+                await waitForEel();
+                
+                const tableContainer = document.getElementById('table-container');
+                const table = window.transactionsTable(5);
+                tableContainer.appendChild(table);
         
+                // Get latest balance and monthly averages concurrently
+                const [balance, averages] = await Promise.all([
+                    eel.get_latest_balance()(),
+                    eel.get_monthly_averages()()
+                ]);
+
+                // Update balance
+                const currentBalance = document.getElementById('current-balance');
+                currentBalance.textContent = `$${Number(balance).toFixed(2)}`;
+        
+                // Update monthly averages
+                console.log("Monthly averages:", averages);
+                if (averages && typeof averages === 'object') {
+                    document.getElementById('avg-monthly-gains').textContent = 
+                        `$${Number(averages.avg_gains).toFixed(2)}`;
+                    document.getElementById('avg-monthly-losses').textContent = 
+                        `$${Number(averages.avg_losses).toFixed(2)}`;
+                    document.getElementById('avg-monthly-net').textContent = 
+                        `$${Number(averages.avg_net).toFixed(2)}`;
+                } else {
+                    console.error("Invalid averages data:", averages);
+                }
+            } catch (error) {
+                console.error("Error loading data:", error);
+            }
         });
     </script>
     
@@ -54,10 +94,47 @@
             background: #7AB8CD;
         }
 
+        .account-stats {
+            display: flex;
+            align-items: baseline;
+            padding: 10px 0;
+            margin: 15px 0; /* Changed from margin-bottom: 20px to equal margins */
+        }
+
+        h1 {
+            margin-bottom: 15px; /* Added to control spacing below Account heading */
+        }
+
+        #table-container {
+            margin-top: 15px; /* Added to make spacing consistent */
+        }
+
+        /* Remove margin-top from current balance since we're controlling spacing with account-stats */
         #current-balance {
-            position:relative;
-            margin-top: 40px;
+            position: relative;
             display: inline-block;
+            margin-right: 20px;
+        }
+
+        .stat-group {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .stat-item {
+            margin: 5px 10px;
+            white-space: nowrap;
+            display: flex;
+            align-items: baseline;
+        }
+
+        .stat-label {
+            margin-right: 5px;
+        }
+
+        .stat-value {
+            font-weight: bold;
         }
     </style> <!--background colors-->
 
@@ -65,7 +142,28 @@
 
     <h1>Account</h1> 
 
-    <p style="margin-top: -40px;">Current Balance: <span id="current-balance">$0.00</span></p>
+    <div class="account-stats">
+        <div class="stat-group">
+            <span class="stat-item">
+                <span class="stat-label">Current Balance:</span>
+                <span id="current-balance" class="stat-value">$0.00</span>
+            </span>
+        </div>
+        <div class="stat-group">
+            <span class="stat-item">
+                <span class="stat-label">Avg Monthly Gains:</span>
+                <span id="avg-monthly-gains" class="stat-value">$0.00</span>
+            </span>
+            <span class="stat-item">
+                <span class="stat-label">Avg Monthly Losses:</span>
+                <span id="avg-monthly-losses" class="stat-value">$0.00</span>
+            </span>
+            <span class="stat-item">
+                <span class="stat-label">Avg Monthly Net:</span>
+                <span id="avg-monthly-net" class="stat-value">$0.00</span>
+            </span>
+        </div>
+    </div>
 
     <div id="table-container"></div>
 
@@ -73,7 +171,7 @@
         <?xml version="1.0" encoding="utf-8"?>
         <svg width="100px" height="100px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="12" cy="12" r="11" fill="white"/>
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M13 9C13 8.44772 12.5523 8 12 8C11.4477 8 11 8.44772 11 9V11H9C8.44772 11 8 11.4477 8 12C8 12.5523 8.44772 13 9 13H11V15C11 15.5523 11.4477 16 12 16C12.5523 16 13 15.5523 13 15V13H15C15.5523 13 16 12.5523 16 12C16 11.4477 15.5523 11 15 11H13V9ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12Z" fill="#323232"/>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M13 9C13 8.44772 12.5523 8 12 8C11.4477 8 11 8.44772 11 9V11H9C8.44772 11 8 11.4477 8 12C8 12.5523 8.4477 13 9 13H11V15C11 15.5523 11.4477 16 12 16C12.5523 16 13 15.5523 13 15V13H15C15.5523 13 16 12.5523 16 12C16 11.4477 15.5523 11 15 11H13V9ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12Z" fill="#323232"/>
         </svg>
     </button>
 </body>

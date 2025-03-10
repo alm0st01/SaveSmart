@@ -150,6 +150,9 @@ export function transactionsTable(rowsPerPage) { //for temporary development, ro
             return;
         }
 
+        // Sort transactions by date in descending order (newest first)
+        transactions.sort((a, b) => new Date(b[3]) - new Date(a[3]));
+
         transactions.forEach((transaction, i) => {
             const row = document.createElement('tr');
             transaction.forEach((value, j) => {

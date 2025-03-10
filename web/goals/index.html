@@ -3,18 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <base href="../">
+    <base href="../../">
     <link rel="stylesheet" href="css/default.css">
     <!--<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">-->
     <link rel="stylesheet" href="css/transactions.css">
     <link rel="stylesheet" href="css/transactiontable.css">
     <script src="js/template.js" type="module" defer></script>
     <script type="text/javascript" src="/eel.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="js/pie_chart.js" type="module"></script>
-    <script src="js/transactions.js" type="module"></script>
+    <script src="js/goals.js" type="module" defer></script>
     <script src="js/cookie.js" type="module"></script>
-    <title>Budgeting</title>
+    <title>Financial Goals</title>
 </head>
 <body>
 
@@ -131,47 +129,23 @@
     <web-header></web-header>
 
     <script type="module">
-        import { createPurchasePieChartByPercent } from '../js/pie_chart.js';
-        import { getCookie } from './js/cookie.js';
+        import { populateGoalsTable } from '../js/goals.js';
+        import { getCookie } from '../js/cookie.js';
         
         if (getCookie('email') != undefined) {
             document.addEventListener('DOMContentLoaded', function() {
-                const withdrawalsChart = createPurchasePieChartByPercent('withdrawalsChart', 1);
-                const depositsChart = createPurchasePieChartByPercent('depositsChart', 2);
+                populateGoalsTable();
             });
         }
         else {
             const userNotLoggedIn = document.querySelector('#userNotLoggedIn');
             userNotLoggedIn.style.display = "inherit";
-            
         }
     </script>
     
     <div style="display: none;" id="userNotLoggedIn">
         <h1 style="color: black;">You are not logged in. Please log in to access this page.</h1>
     </div>
-    <div class="dashboard-container">
-        <h1>Budgeting</h1>
-        <br>
-        <div class="chart-container" style="width:100%; max-width:350px; margin:0 auto;"> 
-        <!--Change max-width for pie chart here; adjust by preference-->
-            <canvas id="withdrawalsChart"></canvas>
-        </div>
-
-        <div class="table-container" id="table-container-1">Select a category from the pie chart.</div>
-
-        <div class="chart-container" style="width:100%; max-width:350px; margin:0 auto;"> 
-        <!--Change max-width for pie chart here; adjust by preference-->
-            <canvas id="depositsChart"></canvas>
-        </div>
-
-        <div class="table-container" id="table-container-2">Select a category from the pie chart.</div>
-
-        
-
-    </div>
-
-    <br>
 
     <div class="goals-section">
         <h2>Financial Goals</h2>
@@ -183,9 +157,11 @@
                 <table class="table table-striped table-bordered table-hover">
                     <thead class="thead-dark">
                         <tr>
-                            <th>Goal Name</th>
+                            <th>Name</th>
                             <th>Target Amount</th>
-                            <th>Current Amount</th>
+                            <th>Emergency Amount</th>
+                            <th>Total Amount</th>
+                            <th>Daily Savings Needed</th>
                             <th>Due Date</th>
                             <th>Progress</th>
                             <th>Actions</th>

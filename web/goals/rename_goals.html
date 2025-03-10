@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../../">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/default.css">
+    <link rel="stylesheet" href="css/add_transaction.css">
+    <!-- Load eel.js first and without defer -->
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="js/template.js" type="module" defer></script>
+    <title>Edit Goal</title>
+</head>
+<body>
+    <web-header></web-header>
+
+    <h2>Edit Goal</h2>
+
+    <form id="edit-goal-form">
+        <input type="hidden" id="goal_id" name="goal_id">
+        <div>
+            <label for="new_goal_name">Item Name:</label>
+            <input type="text" id="new_goal_name" name="new_goal_name" required>
+        </div>
+        <br>
+        <div>
+            <label for="target_amount">Item Price:</label>
+            <input type="number" id="target_amount" name="target_amount" step="0.01" required>
+        </div>
+        <br>
+        <div>
+            <label for="emergency_funds">Desired Emergency Funds:</label>
+            <input type="number" id="emergency_funds" name="emergency_funds" step="0.01" required>
+        </div>
+        <br>
+        <div>
+            <label for="due_date">Target Purchase Date:</label>
+            <input type="date" id="due_date" name="due_date" required>
+        </div>
+        <br>
+        <div id="edit-result" class="alert" style="display: none;"></div>
+        <button type="submit">Save Changes</button>
+    </form>
+
+    <script>
+        // Function to check if eel is ready
+        function waitForEel(callback) {
+            if (window.eel && window.eel.edit_goal) {
+                callback();
+            } else {
+                console.log('Waiting for eel to initialize...');
+                setTimeout(() => waitForEel(callback), 100);
+            }
+        }
+    
+        // Initialize the form
+        async function initializeForm() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const goalId = urlParams.get('id');
+                
+                if (!goalId) {
+                    window.location.href = 'goals/index.html';
+                    return;
+                }
+
+                // Get the goal details from the database
+                const goals = await eel.get_goals()();
+                const goal = goals.find(g => g[0] === goalId); // Assuming first element is goal_id
+
+                if (goal) {
+                    // Set values in the form
+                    document.getElementById('goal_id').value = goal[0];  // goal_id
+                    document.getElementById('new_goal_name').value = goal[1];  // goal_name
+                    document.getElementById('target_amount').value = goal[2];  // target_amount
+                    document.getElementById('emergency_funds').value = goal[3];  // emergency_funds
+                    document.getElementById('due_date').value = goal[4];  // due_date
+                } else {
+                    console.error('Goal not found');
+                    window.location.href = 'goals/index.html';
+                }
+
+                // Add form submit handler
+                document.getElementById('edit-goal-form').addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const resultDiv = document.getElementById('edit-result');
+                    
+                    try {
+                        const goalId = document.getElementById('goal_id').value;
+                        const newName = document.getElementById('new_goal_name').value;
+                        const targetAmount = document.getElementById('target_amount').value;
+                        const emergencyFunds = document.getElementById('emergency_funds').value;
+                        const dueDate = document.getElementById('due_date').value;
+                        
+                        // Debug logging
+                        console.log('Form values being submitted:', {
+                            goalId,
+                            newName,
+                            targetAmount,
+                            emergencyFunds,
+                            dueDate
+                        });
+                        
+                        // Make sure we're passing all values correctly
+                        const success = await window.eel.edit_goal(
+                            goalId.toString(),  // Ensure it's a string
+                            newName,
+                            targetAmount.toString(),  // Ensure it's a string
+                            emergencyFunds.toString(),  // Ensure it's a string
+                            dueDate
+                        )();
+                        
+                        console.log('Edit result:', success);
+                        
+                        if (success) {
+                            resultDiv.className = 'alert alert-success';
+                            resultDiv.textContent = 'Goal edited successfully!';
+                            resultDiv.style.display = 'block';
+                            
+                            // Redirect to goals page after 1 second
+                            setTimeout(() => {
+                                window.location.href = 'goals/index.html';
+                            }, 1000);
+                        } else {
+                            resultDiv.className = 'alert alert-danger';
+                            resultDiv.textContent = 'Failed to edit goal. Please try again.';
+                            resultDiv.style.display = 'block';
+                        }
+                    } catch (error) {
+                        console.error('Error editing goal:', error);
+                        resultDiv.className = 'alert alert-danger';
+                        resultDiv.textContent = 'An error occurred while editing the goal. Please try again.';
+                        resultDiv.style.display = 'block';
+                    }
+                });
+            } catch (error) {
+                console.error('Error initializing form:', error);
+                window.location.href = 'goals/index.html';
+            }
+        }
+    
+        // Wait for both DOM and eel to be ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, waiting for eel...');
+            waitForEel(initializeForm);
+        });
+    </script>
+</body>
+</html>
