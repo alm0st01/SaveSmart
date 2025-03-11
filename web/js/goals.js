@@ -16,11 +16,12 @@ export class GoalCalculator {
         }
 
         const totalNeeded = parseFloat(itemPrice) + parseFloat(emergencyFunds);
-        const canBuyNow = this.currentBalance - itemPrice > emergencyFunds;
+        const canBuyNow = this.currentBalance >= totalNeeded;
         const remainingToSave = totalNeeded - this.currentBalance;
         const dailySavingsNeeded = remainingToSave / daysUntilTarget;
 
-        const progress = (this.currentBalance / totalNeeded) * 100;
+        // If we have more than enough money, progress should be 100%
+        const progress = this.currentBalance >= totalNeeded ? 100 : (this.currentBalance / totalNeeded) * 100;
 
         return {
             success: true,
@@ -74,7 +75,14 @@ export async function populateGoalsTable() {
     if (!tableBody) return;
 
     const goals = await eel.get_goals()();
-    const currentBalance = await eel.get_latest_balance()();
+    const transactions = await eel.get_account_transactions(100, 0)();
+    const currentBalance = transactions.reduce((balance, transaction) => {
+        const amount = parseFloat(transaction[2]);
+        const type = transaction[1];
+        return type === 'Deposit' ? balance + amount : balance - amount;
+    }, 0);
+    
+    console.log('Current Balance:', currentBalance); // Debug log
 
     tableBody.innerHTML = '';
 
@@ -89,12 +97,22 @@ export async function populateGoalsTable() {
         return;
     }
 
-    goals.forEach(goal => {
+    // Get monthly averages once for all goals
+    const monthlyAverages = await eel.get_monthly_averages()();
+    console.log('Monthly Averages:', monthlyAverages); // Debug log
+    const dailyNetIncome = monthlyAverages.avg_net / 30;
+
+    for (const goal of goals) {
         const [goalId, name, targetAmount, emergencyFunds, dueDate] = goal;
         const row = document.createElement('tr');
 
         const totalNeeded = parseFloat(targetAmount) + parseFloat(emergencyFunds);
-        const remainingToSave = totalNeeded - currentBalance;
+        console.log(`Goal ${name}:`, {
+            currentBalance,
+            targetAmount: parseFloat(targetAmount),
+            emergencyFunds: parseFloat(emergencyFunds),
+            totalNeeded
+        }); // Debug log
         
         // Calculate days until target
         const today = new Date();
@@ -102,10 +120,21 @@ export async function populateGoalsTable() {
         const daysUntilTarget = Math.max(1, Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24)));
         
         // Calculate daily savings needed
-        const dailySavingsNeeded = Math.max(0, remainingToSave / daysUntilTarget);
+        const remainingToSave = Math.max(0, totalNeeded - currentBalance);
+        const dailySavingsNeeded = remainingToSave / daysUntilTarget;
         
-        const progress = (currentBalance / totalNeeded) * 100;
-        const formattedProgress = Math.min(100, Math.max(0, progress)).toFixed(1);
+        // Calculate progress percentage - if we have more than needed, it's 100%
+        const progress = currentBalance >= totalNeeded ? 100 : (currentBalance / totalNeeded) * 100;
+        console.log(`Progress for ${name}:`, {
+            progress,
+            comparison: `${currentBalance} >= ${totalNeeded}`
+        }); // Debug log
+        const formattedProgress = progress.toFixed(1);
+
+        // Generate recommendation symbol
+        const recommendationSymbol = dailyNetIncome >= dailySavingsNeeded ? 
+            '<span style="color: green; font-size: 1.5em;">✓</span>' : 
+            '<span style="color: red; font-size: 1.5em;">✗</span>';
 
         const cells = [
             { content: name, align: 'left' },
@@ -127,6 +156,10 @@ export async function populateGoalsTable() {
                 align: 'left'
             },
             { 
+                content: recommendationSymbol,
+                align: 'center'
+            },
+            { 
                 content: `<div class="action-buttons">
                     <button class="btn btn-sm btn-primary" onclick="window.location.href='goals/rename_goals.html?id=${goalId}&name=${encodeURIComponent(name)}'">Edit</button>
                     <button class="btn btn-sm btn-danger" onclick="deleteGoal('${goalId}')">Delete</button>
@@ -143,7 +176,7 @@ export async function populateGoalsTable() {
         });
 
         tableBody.appendChild(row);
-    });
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -210,11 +243,6 @@ document.addEventListener('DOMContentLoaded', () => {
             progressBarInner.style.width = `${result.progress}%`;
             progressBarInner.textContent = `${Math.round(result.progress)}%`;
         });
-    }
-    
-    const goalsTableBody = document.getElementById('goalsTableBody');
-    if (goalsTableBody) {
-        populateGoalsTable();
     }
 });
 

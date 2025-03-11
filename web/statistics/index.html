@@ -9,8 +9,8 @@
     <link rel="stylesheet" href="css/transactiontable.css">
     <script src="js/template.js" type="module" defer></script>
     <script type="text/javascript" src="/eel.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/charts.js" type="module"></script>
+    <script src="js/chart.js" type="module"></script>
     <script src="js/transactions.js" type="module"></script>
     <script src="js/cookie.js" type="module"></script>
     <title>Statistics</title>
@@ -82,10 +82,29 @@
         import { getCookie } from '../js/cookie.js';
         
         if (getCookie('email') != undefined) {
-            document.addEventListener('DOMContentLoaded', function() {
-                const withdrawalsChart = createPurchasePieChartByPercent('withdrawalsChart', 1);
-                const depositsChart = createPurchasePieChartByPercent('depositsChart', 2);
-                const balanceChart = createBalanceLineChart('balanceChart');
+            document.addEventListener('DOMContentLoaded', async function() {
+                try {
+                    console.log('Initializing charts...');
+                    
+                    // Wait for Chart.js to load
+                    if (typeof Chart === 'undefined') {
+                        console.error('Chart.js is not loaded');
+                        return;
+                    }
+
+                    console.log('Creating withdrawal chart...');
+                    const withdrawalsChart = await createPurchasePieChartByPercent('withdrawalsChart', 1);
+                    
+                    console.log('Creating deposits chart...');
+                    const depositsChart = await createPurchasePieChartByPercent('depositsChart', 2);
+                    
+                    console.log('Creating balance chart...');
+                    const balanceChart = await createBalanceLineChart('balanceChart');
+                    
+                    console.log('Charts initialized successfully');
+                } catch (error) {
+                    console.error('Error initializing charts:', error);
+                }
             });
         }
         else {

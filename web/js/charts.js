@@ -55,43 +55,105 @@ export function createPieChart(id, xlabels, ydata, title, onClick) {
 }
 
 export function createPurchasePieChartByPercent(id, mode) {
+    console.log(`Creating pie chart for ${id} with mode ${mode}`);
+    
     eel.get_category_percentages(mode)(function(data) {
+        console.log('Received category data:', data);
+        
+        if (!data || data.length === 0) {
+            console.log('No data available for pie chart');
+            const canvas = document.getElementById(id);
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.font = '14px Arial';
+                ctx.fillStyle = '#666';
+                ctx.textAlign = 'center';
+                ctx.fillText('No data available', canvas.width / 2, canvas.height / 2);
+            }
+            return;
+        }
+
         const xlabels = data.map(item => item[0] || 'Uncategorized');
         const ydata = data.map(item => item[2]);
         var title;
-        if (mode == 1){
+        if (mode == 1) {
             title = "Purchase Categories by Percentage";
         }
-        else if (mode == 2){
+        else if (mode == 2) {
             title = "Deposit Categories by Percentage";
         }
-        const handleClick = (label, value) => {
+
+        const handleClick = (event, elements) => {
+            if (!elements || elements.length === 0) return;
+            
+            const clickedIndex = elements[0].index;
+            const label = xlabels[clickedIndex];
+            const value = ydata[clickedIndex];
+            
             console.log(`Clicked on category ${label} with value ${value}`);
+            
             var tableContainer;
-            if (mode == 1){
+            if (mode == 1) {
                 tableContainer = document.getElementById('table-container-1');
             }
-            else if (mode == 2){
+            else if (mode == 2) {
                 tableContainer = document.getElementById('table-container-2');
             }
+            
             if (!tableContainer) {
-                console.error("Could not find element");
+                console.error(`Could not find table container for mode ${mode}`);
                 return;
             }
             
+            console.log('Clearing table container');
             tableContainer.innerHTML = '';
+            
             const loadingMessage = document.createElement('div');
             loadingMessage.textContent = `Loading transactions for ${label}...`;
             tableContainer.appendChild(loadingMessage);
             
-            // Create the table
+            console.log('Creating budgeting transactions table');
             const table = budgetingTransactionsTable(label, mode);
+            console.log('Table created:', table);
         };
 
-        const chart = createPieChart(id, xlabels, ydata, title, handleClick);
+        const config = {
+            type: 'pie',
+            data: {
+                labels: xlabels,
+                datasets: [{
+                    data: ydata,
+                    backgroundColor: [
+                        'red',
+                        'orange',
+                        'yellow',
+                        'green',
+                        'blue',
+                        'purple',
+                        'pink'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: title
+                    },
+                    legend: {
+                        position: 'bottom'
+                    }
+                },
+                onClick: handleClick
+            }
+        };
+
+        console.log('Creating chart with config:', config);
+        const chart = new Chart(document.getElementById(id), config);
+        return chart;
     });
 }
-
 
 export function createPurchasePieChartByAmount(id) {
     eel.get_category_percentages()(function(data) {

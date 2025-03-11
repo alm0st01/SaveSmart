@@ -1,6 +1,14 @@
 import sqlite3
 import eel
 from random import randint
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+import os
+from datetime import datetime
+import io
 
 from encrypt import encrypt
 
@@ -486,6 +494,172 @@ class transaction_reader:
             print(f"Error getting monthly averages: {str(e)}")
             return {'avg_gains': 0, 'avg_losses': 0, 'avg_net': 0}
 
+    def get_transaction(self, transaction_id):
+        try:
+            # Get the email from cookie
+            email = eel.get_cookie('email')()
+            account_id = self.ar.get_acc_id_with_attr('email', email)
+            
+            if account_id is None:
+                print("Error: Could not find account ID")
+                return None
+
+            # Get all transactions for this account to find the encrypted transaction_id
+            self.cursor.execute('''
+                SELECT transaction_id, transaction_type, amount, transaction_date, transaction_name, description
+                FROM transactions 
+                WHERE account_id = ?
+            ''', (account_id,))
+            
+            transactions = self.cursor.fetchall()
+            
+            # Find the matching transaction by decrypting each ID
+            for trans in transactions:
+                try:
+                    decrypted_id = self.encrypt.decrypt_text(trans[0])
+                    if decrypted_id == transaction_id:
+                        # Decrypt all transaction fields
+                        return [
+                            decrypted_id,
+                            self.encrypt.decrypt_text(trans[1]),  # type
+                            self.encrypt.decrypt_text(trans[2]),  # amount
+                            self.encrypt.decrypt_text(trans[3]),  # date
+                            self.encrypt.decrypt_text(trans[4]),  # name
+                            self.encrypt.decrypt_text(trans[5])   # description
+                        ]
+                except Exception as e:
+                    print(f"Error decrypting transaction: {str(e)}")
+                    continue
+            
+            print(f"No transaction found with ID {transaction_id}")
+            return None
+            
+        except Exception as e:
+            print(f"Error getting transaction: {str(e)}")
+            return None
+
+    def delete_transaction(self, transaction_id):
+        try:
+            # Get the email from cookie without encrypting it again
+            email = eel.get_cookie('email')()
+            account_id = self.ar.get_acc_id_with_attr('email', email)
+            
+            if account_id is None:
+                print("Error: Could not find account ID")
+                return False
+
+            # Get all transactions for this account
+            self.cursor.execute('''
+                SELECT transaction_id, account_id 
+                FROM transactions 
+                WHERE account_id = ?
+            ''', (account_id,))
+            
+            transactions = self.cursor.fetchall()
+            target_transaction_id = None
+            
+            # Find the matching transaction by decrypting each ID
+            for trans in transactions:
+                encrypted_id = trans[0]
+                try:
+                    decrypted_id = self.encrypt.decrypt_text(encrypted_id)
+                    if decrypted_id == transaction_id:
+                        target_transaction_id = encrypted_id
+                        break
+                except Exception as e:
+                    print(f"Error decrypting transaction ID: {str(e)}")
+                    continue
+            
+            if target_transaction_id is None:
+                print(f"No transaction found with ID {transaction_id}")
+                return False
+                
+            # Delete the transaction using the encrypted ID
+            self.cursor.execute('''
+                DELETE FROM transactions 
+                WHERE transaction_id = ? AND account_id = ?
+            ''', (target_transaction_id, account_id))
+            
+            self.cursor.connection.commit()
+            deleted = self.cursor.rowcount > 0
+            
+            if deleted:
+                print(f"Successfully deleted transaction {transaction_id}")
+            else:
+                print(f"Failed to delete transaction {transaction_id}")
+                
+            return deleted
+            
+        except Exception as e:
+            print(f"Error deleting transaction: {str(e)}")
+            return False
+
+    def edit_transaction(self, transaction_id, transaction_type, amount, transaction_date, name, description):
+        try:
+            # Get the email from cookie without encrypting it again
+            email = eel.get_cookie('email')()
+            account_id = self.ar.get_acc_id_with_attr('email', email)
+            
+            if account_id is None:
+                print("Error: Could not find account ID")
+                return False
+
+            # Get all transactions for this account to find the encrypted transaction_id
+            self.cursor.execute('''
+                SELECT transaction_id, account_id 
+                FROM transactions 
+                WHERE account_id = ?
+            ''', (account_id,))
+            
+            transactions = self.cursor.fetchall()
+            target_transaction_id = None
+            
+            # Find the matching transaction by decrypting each ID
+            for trans in transactions:
+                encrypted_id = trans[0]
+                try:
+                    decrypted_id = self.encrypt.decrypt_text(encrypted_id)
+                    if decrypted_id == transaction_id:
+                        target_transaction_id = encrypted_id
+                        break
+                except Exception as e:
+                    print(f"Error decrypting transaction ID: {str(e)}")
+                    continue
+            
+            if target_transaction_id is None:
+                print(f"No transaction found with ID {transaction_id}")
+                return False
+
+            # Encrypt the new values
+            enc_type = self.encrypt.encrypt_text(transaction_type)
+            enc_amount = self.encrypt.encrypt_text(str(amount))
+            enc_date = self.encrypt.encrypt_text(transaction_date)
+            enc_name = self.encrypt.encrypt_text(name)
+            enc_description = self.encrypt.encrypt_text(description)
+
+            # Update the transaction
+            self.cursor.execute('''
+                UPDATE transactions 
+                SET transaction_type = ?, amount = ?, transaction_date = ?, 
+                    transaction_name = ?, description = ?
+                WHERE transaction_id = ? AND account_id = ?
+            ''', (enc_type, enc_amount, enc_date, enc_name, enc_description, 
+                  target_transaction_id, account_id))
+            
+            self.cursor.connection.commit()
+            updated = self.cursor.rowcount > 0
+            
+            if updated:
+                print(f"Successfully edited transaction {transaction_id}")
+            else:
+                print(f"Failed to edit transaction {transaction_id}")
+                
+            return updated
+            
+        except Exception as e:
+            print(f"Error editing transaction: {str(e)}")
+            return False
+
 class goals_reader:
     def __init__(self):
         connection = sqlite3.connect('sqlite/fbla-db.db')
@@ -549,7 +723,7 @@ class goals_reader:
                 SELECT goal_id, goal_name, target_amount, emergency_funds, due_date
                 FROM goals 
                 WHERE account_id = ?
-                ORDER BY due_date ASC
+                ORDER BY rowid DESC
             ''', (account_id,))
             
             result = self.cursor.fetchall()
@@ -886,3 +1060,83 @@ def get_monthly_averages():
     except Exception as e:
         print(f"Error in get_monthly_averages: {str(e)}")
         return {'avg_gains': 0, 'avg_losses': 0, 'avg_net': 0}
+
+@eel.expose
+def delete_transaction(transaction_id):
+    return tr.delete_transaction(transaction_id)
+
+@eel.expose
+def edit_transaction(transaction_id, transaction_type, amount, transaction_date, name, description):
+    return tr.edit_transaction(transaction_id, transaction_type, amount, transaction_date, name, description)
+@eel.expose
+def get_transaction(transaction_id):
+    return tr.get_transaction(transaction_id)
+
+@eel.expose
+def generate_pdf_data():
+    try:
+        # Create an in-memory buffer for the PDF
+        buffer = io.BytesIO()
+        
+        # Create the PDF document
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        
+        # Add title
+        styles = getSampleStyleSheet()
+        title = Paragraph("Transaction Report", styles['Title'])
+        elements.append(title)
+        elements.append(Spacer(1, 12))
+        
+        # Get transactions from database
+        transactions = get_all_transactions()
+        
+        # Create table data
+        data = [['Date', 'Type', 'Amount', 'Description']]
+        total_amount = 0
+        
+        for transaction in transactions:
+            date = transaction[1]
+            type_ = transaction[2]
+            amount = float(transaction[3])
+            description = transaction[4]
+            
+            data.append([date, type_, f"${amount:.2f}", description])
+            total_amount += amount if type_ == 'deposit' else -amount
+        
+        # Create and style the table
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 12),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        elements.append(table)
+        
+        # Add summary
+        elements.append(Spacer(1, 20))
+        summary = Paragraph(f"Total Balance: ${total_amount:.2f}", styles['Heading2'])
+        elements.append(summary)
+        
+        # Build PDF
+        doc.build(elements)
+        
+        # Get the PDF data
+        pdf_data = buffer.getvalue()
+        buffer.close()
+        
+        # Return the PDF data as bytes
+        return list(pdf_data)  # Convert bytes to list for JSON serialization
+        
+    except Exception as e:
+        print(f"Error generating PDF: {str(e)}")
+        return None
