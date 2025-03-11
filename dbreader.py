@@ -2,7 +2,7 @@ import sqlite3
 import eel
 from random import randint
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import letter, landscape
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
@@ -1078,8 +1078,8 @@ def generate_pdf_data():
         # Create an in-memory buffer for the PDF
         buffer = io.BytesIO()
         
-        # Create the PDF document
-        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        # Create the PDF document with landscape orientation
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(letter))
         elements = []
         
         # Add title
@@ -1089,43 +1089,145 @@ def generate_pdf_data():
         elements.append(Spacer(1, 12))
         
         # Get transactions from database
-        transactions = get_all_transactions()
+        transactions = get_account_transactions(100, 0)  # Get last 100 transactions
         
-        # Create table data
-        data = [['Date', 'Type', 'Amount', 'Description']]
-        total_amount = 0
+        if not transactions:
+            # Handle no transactions case
+            elements.append(Paragraph("No transactions found.", styles['Normal']))
+            doc.build(elements)
+            pdf_data = buffer.getvalue()
+            buffer.close()
+            return list(pdf_data)
         
-        for transaction in transactions:
-            date = transaction[1]
-            type_ = transaction[2]
-            amount = float(transaction[3])
-            description = transaction[4]
-            
-            data.append([date, type_, f"${amount:.2f}", description])
-            total_amount += amount if type_ == 'deposit' else -amount
+        # Add account summary
+        current_balance = sum([float(t[2]) if t[1] == 'Deposit' else -float(t[2]) for t in transactions])
+        summary = Paragraph(f"Current Balance: ${current_balance:.2f}", styles['Heading2'])
+        elements.append(summary)
+        elements.append(Spacer(1, 12))
         
-        # Create and style the table
-        table = Table(data)
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        # Get monthly averages
+        monthly_data = get_monthly_averages()
+        
+        # Create monthly summary table
+        monthly_table_data = [
+            ['Monthly Summary', 'Amount'],
+            ['Average Monthly Gains', f"${monthly_data['avg_gains']:.2f}"],
+            ['Average Monthly Losses', f"${monthly_data['avg_losses']:.2f}"],
+            ['Average Monthly Net', f"${monthly_data['avg_net']:.2f}"]
+        ]
+        
+        # Style for the monthly summary table
+        monthly_table = Table(monthly_table_data, colWidths=[2*inch, inch])
+        monthly_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#97CADB')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, 0), 'LEFT'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('SPAN', (0, 0), (1, 0)),  # Merge header cells
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('ALIGN', (0, 1), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 1), (1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        
+        elements.append(monthly_table)
+        elements.append(Spacer(1, 20))
+        
+        # Add transactions table header
+        elements.append(Paragraph("Transaction Details", styles['Heading2']))
+        elements.append(Spacer(1, 12))
+        
+        # Create transactions table data with headers
+        table_data = [['ID', 'Type', 'Amount', 'Date', 'Purchase Type', 'Description']]
+        
+        # Sort transactions by date (newest first)
+        transactions.sort(key=lambda x: x[3], reverse=True)
+        
+        # Define column widths as percentages of page width
+        available_width = landscape(letter)[0] - inch
+        col_widths = [
+            available_width * 0.10,  # ID
+            available_width * 0.12,  # Type
+            available_width * 0.12,  # Amount
+            available_width * 0.15,  # Date
+            available_width * 0.20,  # Purchase Type
+            available_width * 0.31   # Description
+        ]
+        
+        # Add transaction rows
+        for transaction in transactions:
+            try:
+                # Format date
+                date_str = transaction[3]
+                try:
+                    date = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+                    formatted_date = date.strftime('%m/%d/%Y')
+                except ValueError:
+                    try:
+                        date = datetime.strptime(date_str, '%Y-%m-%d')
+                        formatted_date = date.strftime('%m/%d/%Y')
+                    except ValueError:
+                        formatted_date = date_str
+                
+                # Format amount
+                amount = f"${float(transaction[2]):.2f}"
+                
+                # Create row with wrapped text
+                row = [
+                    Paragraph(str(transaction[0]), styles['Normal']),  # ID
+                    Paragraph(str(transaction[1]), styles['Normal']),  # Type
+                    Paragraph(amount, styles['Normal']),               # Amount
+                    Paragraph(formatted_date, styles['Normal']),       # Date
+                    Paragraph(str(transaction[4]), styles['Normal']),  # Purchase Type
+                    Paragraph(str(transaction[5]), styles['Normal'])   # Description
+                ]
+                table_data.append(row)
+            except Exception as e:
+                print(f"Error processing transaction for PDF: {str(e)}")
+                continue
+        
+        # Create the transactions table
+        transactions_table = Table(table_data, colWidths=col_widths, repeatRows=1)
+        transactions_table.setStyle(TableStyle([
+            # Header style
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#97CADB')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+            ('ALIGN', (0, 0), (-1, 0), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            # Row styles
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
             ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 12),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            # Alternating row colors
+            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.HexColor('#f8f9fa')]),
+            # Cell padding
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            # Alignment
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # ID centered (data rows only)
+            ('ALIGN', (1, 1), (1, -1), 'CENTER'),  # Type centered (data rows only)
+            ('ALIGN', (2, 1), (2, -1), 'RIGHT'),   # Amount right-aligned (data rows only)
+            ('ALIGN', (3, 1), (3, -1), 'CENTER'),  # Date centered (data rows only)
+            ('ALIGN', (4, 1), (4, -1), 'LEFT'),    # Purchase Type left-aligned (data rows only)
+            ('ALIGN', (5, 1), (5, -1), 'LEFT'),    # Description left-aligned (data rows only)
         ]))
-        elements.append(table)
         
-        # Add summary
-        elements.append(Spacer(1, 20))
-        summary = Paragraph(f"Total Balance: ${total_amount:.2f}", styles['Heading2'])
-        elements.append(summary)
+        elements.append(transactions_table)
         
         # Build PDF
         doc.build(elements)
@@ -1135,7 +1237,7 @@ def generate_pdf_data():
         buffer.close()
         
         # Return the PDF data as bytes
-        return list(pdf_data)  # Convert bytes to list for JSON serialization
+        return list(pdf_data)
         
     except Exception as e:
         print(f"Error generating PDF: {str(e)}")

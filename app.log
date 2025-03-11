@@ -1,0 +1,2 @@
+2025-03-11 16:23:53,367 - INFO - Eel initialized successfully
+2025-03-11 16:23:53,367 - ERROR - Failed to start application: start() got an unexpected keyword argument 'callback'

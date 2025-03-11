@@ -82,7 +82,7 @@ export async function populateGoalsTable() {
         return type === 'Deposit' ? balance + amount : balance - amount;
     }, 0);
     
-    console.log('Current Balance:', currentBalance); // Debug log
+    console.log('Current Balance:', currentBalance);
 
     tableBody.innerHTML = '';
 
@@ -97,12 +97,19 @@ export async function populateGoalsTable() {
         return;
     }
 
+    // Sort goals by date (earliest first)
+    const sortedGoals = [...goals].sort((a, b) => {
+        const dateA = new Date(a[4]); // dueDate is at index 4
+        const dateB = new Date(b[4]);
+        return dateA - dateB;
+    });
+
     // Get monthly averages once for all goals
     const monthlyAverages = await eel.get_monthly_averages()();
-    console.log('Monthly Averages:', monthlyAverages); // Debug log
+    console.log('Monthly Averages:', monthlyAverages);
     const dailyNetIncome = monthlyAverages.avg_net / 30;
 
-    for (const goal of goals) {
+    for (const goal of sortedGoals) {
         const [goalId, name, targetAmount, emergencyFunds, dueDate] = goal;
         const row = document.createElement('tr');
 
@@ -112,11 +119,12 @@ export async function populateGoalsTable() {
             targetAmount: parseFloat(targetAmount),
             emergencyFunds: parseFloat(emergencyFunds),
             totalNeeded
-        }); // Debug log
+        });
         
-        // Calculate days until target
+        // Calculate days until target and adjust date
         const today = new Date();
         const targetDate = new Date(dueDate);
+        targetDate.setDate(targetDate.getDate() + 1); // Add one day to fix the off-by-one issue
         const daysUntilTarget = Math.max(1, Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24)));
         
         // Calculate daily savings needed
@@ -128,7 +136,7 @@ export async function populateGoalsTable() {
         console.log(`Progress for ${name}:`, {
             progress,
             comparison: `${currentBalance} >= ${totalNeeded}`
-        }); // Debug log
+        });
         const formattedProgress = progress.toFixed(1);
 
         // Generate recommendation symbol
@@ -142,7 +150,7 @@ export async function populateGoalsTable() {
             { content: `$${parseFloat(emergencyFunds).toFixed(2)}`, align: 'left' },
             { content: `$${totalNeeded.toFixed(2)}`, align: 'left' },
             { content: `$${dailySavingsNeeded.toFixed(2)}`, align: 'left' },
-            { content: new Date(dueDate).toLocaleDateString(), align: 'left' },
+            { content: targetDate.toLocaleDateString(), align: 'left' },  // Use adjusted date
             { 
                 content: `<div class="progress">
                     <div class="progress-bar" role="progressbar" 

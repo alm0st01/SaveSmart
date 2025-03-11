@@ -7,61 +7,20 @@
     <!--<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">-->
     <link rel="stylesheet" href="css/default.css">
     <link rel="stylesheet" href="css/add_transaction.css">
-    <script src="js/template.js" type="module" defer></script>
-    <script type="text/javascript" src="js/add_transaction.js" defer></script>
-    <script type="text/javascript" src="/eel.js"></script>
-    <script type="text/javascript" src="js/transactions.js"></script>
+    <!-- Load eel.js first -->
+    <script src="/eel.js"></script>
+    <!-- Load other scripts after eel.js -->
+    <script src="js/template.js" type="module"></script>
+    <script src="js/transactions.js" type="module"></script>
     <title>Add transaction</title>
 </head>
 <body>
-
-    <script type="module"> 
-        function togglePurchaseType() { // changes purchase type after user selection
-                const transactionType = document.getElementById('transaction_type').value;
-                const purchaseTypeField = document.getElementById('purchase-type-field');
-                if (transactionType === 'Deposit') {
-                    purchaseTypeField.style.display = 'none';
-                } else {
-                    purchaseTypeField.style.display = 'block';
-                }
-            }
-            document.addEventListener('DOMContentLoaded', function () { //detects user selection in purchase type dropdown
-            const transactionTypeSelect = document.getElementById('transaction_type');
-            transactionTypeSelect.addEventListener('change', togglePurchaseType);
-            togglePurchaseType();
-        });
-
-
-        function toggleTransactionFields() { // changes transaction type after user selection
-            const transactionType = document.getElementById('transaction_type').value;
-            const withdrawalFields = document.getElementById('withdrawal-fields');
-            const depositFields = document.getElementById('deposit-fields');
-            
-            if (transactionType === 'Deposit') {
-                withdrawalFields.style.display = 'none';
-                depositFields.style.display = 'block';
-                depositFields.querySelector('select').required = true;
-                withdrawalFields.querySelector('select').required = false;
-            } else {
-                withdrawalFields.style.display = 'block';
-                depositFields.style.display = 'none';
-                withdrawalFields.querySelector('select').required = true;
-                depositFields.querySelector('select').required = false;
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', function() { //detects user selection in transaction type dropdown
-            const transactionTypeSelect = document.getElementById('transaction_type');
-            transactionTypeSelect.addEventListener('change', toggleTransactionFields);
-            toggleTransactionFields();
-        });
-         </script>
-
     <web-header></web-header>
 
     <h2>Add New Transaction</h2>
 
-    <form id="add-transaction-form"> <!--User fills out boxes to add their varying transactions-->
+    <form id="add-transaction-form">
+        <!-- Transaction Type -->
         <div>
             <label for="transaction_type">Transaction Type:</label>
             <select id="transaction_type" name="transaction_type" required>
@@ -72,14 +31,16 @@
             </select>
         </div>
         <br>
+        <!-- Amount -->
         <div>
             <label for="amount">Amount:</label>
             <input type="text" id="amount" name="amount" required>
         </div>
         <br>
+        <!-- Purchase/Deposit Type -->
         <div id="withdrawal-fields" style="display: none;">
             <label for="transaction_name">Type of Purchase:</label>
-            <select id="transaction_name" name="transaction_name">
+            <select id="transaction_name" name="transaction_name" required>
                 <option value="Select" disabled selected>Select One</option>
                 <option value="House & Utilities">Housing & Utilities</option>
                 <option value="Food">Food</option>
@@ -92,7 +53,7 @@
         </div>
         <div id="deposit-fields" style="display: none;">
             <label for="deposit_type">Source of Deposit:</label>
-            <select id="deposit_type" name="transaction_name">
+            <select id="deposit_type" name="transaction_name" required>
                 <option value="Select" disabled selected>Select One</option>
                 <option value="Income">Income/Salary</option>
                 <option value="Investment">Investment Returns</option>
@@ -102,11 +63,13 @@
             </select>
         </div>
         <br>
+        <!-- Description -->
         <div>
             <label for="description">Description:</label>
             <input type="text" id="description" name="description">
         </div>
         <br>
+        <!-- Date -->
         <div>
             <label for="transaction_date">Date:</label>
             <input type="date" id="transaction_date" name="transaction_date" required>
@@ -114,6 +77,102 @@
         <br>
         <button type="submit">Submit</button>
     </form>
-    </body>
-    </html>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const transactionType = document.getElementById('transaction_type');
+            const withdrawalFields = document.getElementById('withdrawal-fields');
+            const depositFields = document.getElementById('deposit-fields');
+
+            function toggleFields() {
+                if (!transactionType || !withdrawalFields || !depositFields) {
+                    console.error('Required form elements not found');
+                    return;
+                }
+
+                const selectedType = transactionType.value;
+                if (selectedType === 'Deposit') {
+                    withdrawalFields.style.display = 'none';
+                    depositFields.style.display = 'block';
+                    const depositSelect = depositFields.querySelector('select');
+                    const withdrawalSelect = withdrawalFields.querySelector('select');
+                    if (depositSelect) depositSelect.required = true;
+                    if (withdrawalSelect) withdrawalSelect.required = false;
+                } else {
+                    withdrawalFields.style.display = 'block';
+                    depositFields.style.display = 'none';
+                    const depositSelect = depositFields.querySelector('select');
+                    const withdrawalSelect = withdrawalFields.querySelector('select');
+                    if (withdrawalSelect) withdrawalSelect.required = true;
+                    if (depositSelect) depositSelect.required = false;
+                }
+            }
+
+            // Set up event listener for transaction type changes
+            if (transactionType) {
+                transactionType.addEventListener('change', toggleFields);
+                // Initial toggle
+                toggleFields();
+            }
+
+            // Handle form submission
+            const form = document.getElementById('add-transaction-form');
+            if (form) {
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    // Get form values
+                    const transactionType = document.getElementById('transaction_type').value;
+                    const amount = document.getElementById('amount').value;
+                    const description = document.getElementById('description').value;
+                    const date = document.getElementById('transaction_date').value;
+                    
+                    // Get the appropriate transaction name based on type
+                    let transactionName;
+                    if (transactionType === 'Deposit') {
+                        transactionName = document.getElementById('deposit_type').value;
+                    } else {
+                        transactionName = document.getElementById('transaction_name').value;
+                    }
+
+                    // Validate required fields
+                    if (transactionType === 'Select' || !amount || !date || transactionName === 'Select') {
+                        alert('Please fill in all required fields');
+                        return;
+                    }
+
+                    // Validate amount is a valid number
+                    const numAmount = parseFloat(amount);
+                    if (isNaN(numAmount) || numAmount <= 0) {
+                        alert('Please enter a valid positive amount');
+                        return;
+                    }
+
+                    try {
+                        // Call the Python function to add the transaction
+                        const result = await eel.add_transaction(
+                            transactionType,
+                            amount,
+                            date,
+                            transactionName,
+                            description
+                        )();
+                        
+                        if (result === true) {
+                            alert('Transaction added successfully!');
+                            // Redirect back to transactions page
+                            window.location.href = 'account/banking/index.html';
+                        } else {
+                            alert('Failed to add transaction. Please try again.');
+                        }
+                    } catch (error) {
+                        console.error('Error adding transaction:', error);
+                        alert('An error occurred while adding the transaction. Please try again.');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
     <!--html to make the options in all the dropdowns and the buttons appear-->

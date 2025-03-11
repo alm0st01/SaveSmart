@@ -1,3 +1,4 @@
+// Utility functions
 function calculateCurrentBalance(transactions) {
     return transactions.reduce((balance, transaction) => {
         const amount = parseFloat(transaction[2]);
@@ -10,6 +11,7 @@ function calculateCurrentBalance(transactions) {
     }, 0);
 }
 
+// Main functions
 export function budgetingTransactionsTable(category, mode) {
     console.log(`Creating budgeting table for category: ${category}, mode: ${mode}`);
     
@@ -124,8 +126,6 @@ export function budgetingTransactionsTable(category, mode) {
     wrapper.appendChild(table);
     return wrapper;
 }
-
-window.budgetingTransactionsTable = budgetingTransactionsTable;
 
 export function transactionsTable(rowsPerPage) {
     const wrapper = document.createElement('div');
@@ -275,17 +275,17 @@ export async function deleteTransaction(transactionId) {
     }
 }
 
-function showSearchDialog() {
+export function showSearchDialog() {
     $('#searchModal').modal('show');
     $('#searchInput').focus();
 }
 
-function showNotification(message) {
+export function showNotification(message) {
     $('#notificationMessage').text(message);
     $('#notificationModal').modal('show');
 }
 
-function performSearch() {
+export function performSearch() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
     const tbody = document.querySelector('#table-container table tbody');
     let found = false;
@@ -348,27 +348,16 @@ function performSearch() {
     $('#searchModal').modal('hide');
 }
 
-function resetFilters() {
+export function resetFilters() {
     const tableContainer = document.getElementById('table-container');
     if (tableContainer) {
-        // Clear the container
         tableContainer.innerHTML = '';
-        // Create and append a new table
         const table = transactionsTable(5);
         tableContainer.appendChild(table);
     }
 }
 
-// Make functions available globally
-window.transactionsTable = transactionsTable;
-window.deleteTransaction = deleteTransaction;
-window.budgetingTransactionsTable = budgetingTransactionsTable;
-window.showSearchDialog = showSearchDialog;
-window.performSearch = performSearch;
-window.resetFilters = resetFilters;
-window.showNotification = showNotification;
-
-function exportTransactionsToCSV() {
+export function exportTransactionsToCSV() {
     eel.get_account_transactions(100, 0)(function(transactions) {
         if (!transactions || transactions.length === 0) {
             showNotification('No transactions to export');
@@ -422,9 +411,7 @@ function exportTransactionsToCSV() {
     });
 }
 
-window.exportTransactionsToCSV = exportTransactionsToCSV;
-
-async function exportTransactionsToPDF() {
+export async function exportTransactionsToPDF() {
     try {
         const pdfData = await eel.generate_pdf_data()();
         // Create a Blob from the PDF data
@@ -449,4 +436,15 @@ async function exportTransactionsToPDF() {
     }
 }
 
-window.exportTransactionsToPDF = exportTransactionsToPDF;
+// Make functions available globally as well
+Object.assign(window, {
+    budgetingTransactionsTable,
+    transactionsTable,
+    deleteTransaction,
+    showSearchDialog,
+    performSearch,
+    resetFilters,
+    showNotification,
+    exportTransactionsToCSV,
+    exportTransactionsToPDF
+});
