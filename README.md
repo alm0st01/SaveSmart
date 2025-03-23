@@ -1,5 +1,5 @@
 # SaveSmart  
-SaveSmart is our submission for the 2024-25 FBLA event, Coding and Programming
+SaveSmart is our submission for the 2024-25 FBLA event, Coding and Programming.
 
 
 ## Overview  
