@@ -1,4 +1,6 @@
 # SaveSmart  
+SaveSmart is our submission for the 2024-25 FBLA event, Coding and Programming
+
 
 ## Overview  
 SaveSmart is an financial tracking application designed to help users manage their income, expenses, and savings goals easily. With SaveSmart, users will be able to:  
